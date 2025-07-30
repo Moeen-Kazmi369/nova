@@ -1,0 +1,26 @@
+# Node modules
+node_modules/
+
+# Environment variables
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Dependency directories
+jspm_packages/
+
+# Build output
+dist/
+build/
+
+# TypeScript
+*.tsbuildinfo
+
+# Optional: VS Code settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
