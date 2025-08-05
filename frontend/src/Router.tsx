@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import App from "./App";
-import { VoiceModePage } from "./pages/VoiceModePage";
+import VoiceModePage from "./pages/VoiceModePage";
 import { AboutPage } from "./pages/AboutPage";
 import MicAccessPage from "./pages/MicAccessPage";
 import { Toaster } from "sonner";

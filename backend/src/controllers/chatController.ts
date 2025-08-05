@@ -272,3 +272,68 @@ export const uploadMessageWithFile = async (req: any, res: any) => {
   }
 };
 
+export const saveVoiceChat = async (req: Request, res: Response) => {
+  const { userId, transcripts } = req.body;
+
+  if (!userId || !Array.isArray(transcripts)) {
+    return res
+      .status(400)
+      .json({ error: "userId and transcripts are required" });
+  }
+
+  try {
+    // Convert transcript messages into a prompt
+    const messages = [
+      {
+        role: "system",
+        content:
+          "You are a helpful assistant. Summarize this conversation with a short, meaningful title.",
+      },
+      {
+        role: "user",
+        content: transcripts
+          .slice(0, 10) // Limit to the first 10 for token efficiency
+          .map(
+            (msg: any) =>
+              `${msg.source === "user" ? "User" : "AI"}: ${msg.message}`
+          )
+          .join("\n"),
+      },
+    ];
+
+    // Generate a meaningful title using GPT-4o
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages,
+      max_tokens: 20,
+      temperature: 0.7,
+    });
+
+    const chatTitle =
+      completion.choices[0]?.message?.content?.trim() ||
+      `Voice Session - ${new Date().toLocaleString()}`;
+    const chat = await Chat.create({ user: userId, title: chatTitle });
+
+    // Prepare messages to be created
+    const messageDocs = await Promise.all(
+      transcripts.map((msg: any) =>
+        Message.create({
+          user: userId,
+          text: msg?.message,
+          isUser: msg?.source === "user",
+          timestamp: msg?.timestamp ? new Date(msg?.timestamp) : new Date(),
+        })
+      )
+    );
+
+    // Link message IDs to the chat
+    chat.messages = messageDocs.map((m) => m._id);
+    chat.updatedAt = new Date();
+    await chat.save();
+
+    res.status(201).json({ chat });
+  } catch (err) {
+    console.error("Failed to save voice chat:", err);
+    res.status(500).json({ error: "Failed to save voice chat" });
+  }
+};

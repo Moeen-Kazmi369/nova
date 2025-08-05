@@ -7,8 +7,9 @@ import {
   getChatMessages,
   addMessageToChat,
   uploadFileToChat,
-  uploadMessageWithFile
-} from '../controllers/chatController.js';
+  uploadMessageWithFile,
+  saveVoiceChat,
+} from "../controllers/chatController.js";
 import { protect } from '../middleware/authMiddleware.js';
 import multer from 'multer';
 import { speechToText } from '../controllers/speechController.js';
@@ -26,5 +27,5 @@ router.post('/:chatId/message', protect, addMessageToChat);
 router.post('/speech-to-text', protect, upload.single('audio'), speechToText);
 router.post('/:chatId/upload', protect, upload.single('file'), uploadFileToChat);
 router.post('/:chatId/upload-message', protect, upload.single('file'), uploadMessageWithFile);
-
+router.post("/voice-chat/save", protect, saveVoiceChat);
 export default router; 
