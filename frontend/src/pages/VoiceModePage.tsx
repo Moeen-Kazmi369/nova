@@ -87,6 +87,7 @@ const VoiceModePage: React.FC = () => {
       if (!response.ok) throw new Error(data.error || "Failed to save");
 
       console.log("Saved chat:", data.chat);
+      window.location.reload();
       // alert("Voice session saved successfully!");
     } catch (error) {
       console.error("Save session error:", error);
