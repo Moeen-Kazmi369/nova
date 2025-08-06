@@ -56,11 +56,13 @@ const VoiceModePage: React.FC = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     return user.token;
   };
+  console.log(transcripts);
   const handleSaveSession = async () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = user?.user?._id;
     const latestTranscripts = transcriptsRef.current;
     console.log(userId);
+    console.log(latestTranscripts);
     if (!userId || latestTranscripts.length <= 0) {
       return console.warn("No user or transcripts to save");
     }
