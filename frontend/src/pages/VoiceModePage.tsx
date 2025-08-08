@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useConversation, MessageEvent } from "@elevenlabs/react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Menu, Volume2 } from "lucide-react";
+import { ArrowLeft, Menu } from "lucide-react";
 import { CircularWaveform } from "../components/CircularWaveform";
 import { MenuOverlay } from "../components/MenuOverlay";
-import { useChats } from "../hooks/useChats";
 
 const VoiceModePage: React.FC = () => {
   const navigate = useNavigate();
@@ -24,9 +23,9 @@ const VoiceModePage: React.FC = () => {
     onError: (err) => console.error("Conversation error:", err),
   });
   const [isListening, setIsListening] = useState(false);
+
   const connectionStatus = conversation.status;
   const isSpeaking = conversation.isSpeaking;
-  const isProcessing = conversation.isProcessing;
 
   const startConversation = useCallback(async () => {
     try {
@@ -52,6 +51,21 @@ const VoiceModePage: React.FC = () => {
   useEffect(() => {
     transcriptsRef.current = transcripts;
   }, [transcripts]);
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+
+    if (connectionStatus === "connected" && !isSpeaking) {
+      timeout = setTimeout(() => {
+        setIsListening(true);
+      }, 2000); // 3 seconds
+    } else {
+      setIsListening(false);
+      clearTimeout(timeout);
+    }
+
+    return () => clearTimeout(timeout);
+  }, [connectionStatus, isSpeaking]);
+
   const getToken = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     return user.token;
@@ -126,7 +140,7 @@ const VoiceModePage: React.FC = () => {
         <div className="flex-1 py-6 flex flex-col items-center justify-center px-4">
           <div className="mb-4">
             <CircularWaveform
-              isActive={isListening || isSpeaking || isProcessing}
+              isActive={isListening || isSpeaking || false}
               isUserInput={isListening}
               audioLevel={Math.random() * 0.8 + 0.2}
               size={isDesktop ? 180 : 150}
@@ -155,15 +169,6 @@ const VoiceModePage: React.FC = () => {
             {isListening && (
               <p className="text-emerald-400 animate-pulse">Listening...</p>
             )}
-            {isProcessing && (
-              <p className="text-blue-400 animate-pulse">Processing...</p>
-            )}
-            {!isSpeaking &&
-              !isListening &&
-              !isProcessing &&
-              connectionStatus === "connected" && (
-                <p className="text-gray-400">Ready to talk</p>
-              )}
           </div>
 
           {isDesktop && (
