@@ -168,7 +168,7 @@ const CurrentChatVoiceModePage: React.FC = () => {
               <p>Real-time voice conversation with ElevenLabs & Whisper</p>
             </div>
           )}
-          <div className="text-center mt-24">
+          <div className="text-center mt-4">
             <button
               onClick={() => navigate("/")}
               className="p-2 text-gray-400 bg-gray-800 rounded-full hover:text-white transition-colors"
