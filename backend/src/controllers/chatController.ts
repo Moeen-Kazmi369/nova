@@ -337,3 +337,44 @@ export const saveVoiceChat = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to save voice chat" });
   }
 };
+
+
+export const appendVoiceChat = async (req: Request, res: Response) => {
+  const { chatId, transcripts } = req.body;
+
+  if (!chatId || !Array.isArray(transcripts)) {
+    return res
+      .status(400)
+      .json({ error: "chatId and transcripts are required" });
+  }
+
+  try {
+    // Find the existing chat
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+
+    // Create new messages
+    const newMessageDocs = await Promise.all(
+      transcripts.map((msg: any) =>
+        Message.create({
+          user: chat.user, // Same user from existing chat
+          text: msg?.message,
+          isUser: msg?.source === "user",
+          timestamp: msg?.timestamp ? new Date(msg?.timestamp) : new Date(),
+        })
+      )
+    );
+
+    // Append new message IDs to existing chat
+    chat.messages = [...chat.messages, ...newMessageDocs.map((m) => m._id)];
+    chat.updatedAt = new Date();
+    await chat.save();
+
+    res.status(200).json({ chat });
+  } catch (err) {
+    console.error("Failed to append voice chat:", err);
+    res.status(500).json({ error: "Failed to append voice chat" });
+  }
+};

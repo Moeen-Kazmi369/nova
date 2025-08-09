@@ -10,6 +10,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ProtectRoutes from "./components/ProtectRoutes";
+import CurrentChatVoiceModePage from "./pages/CurrentChatVoiceModePage";
 
 export default function AppRouter() {
   return (
@@ -23,6 +24,7 @@ export default function AppRouter() {
         <Route element={<ProtectRoutes />}>
           <Route path="/" element={<App />} />
           <Route path="/voice" element={<VoiceModePage />} />
+          <Route path="/voice/:id" element={<CurrentChatVoiceModePage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/mic-access" element={<MicAccessPage />} />
         </Route>

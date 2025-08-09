@@ -15,7 +15,7 @@ import { VoiceOverlay } from "./components/VoiceOverlay";
 import micIcone from "./assets/Icon.png";
 import axios from "axios";
 import { Send, Loader2 } from 'lucide-react';
-
+import { useNavigate } from "react-router-dom";
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -40,16 +40,22 @@ function App() {
     processMessage,
     fetchMessages,
   } = useChats();
-  const { isSpeaking, stopSpeaking, speakWithAnalysis, audioLevel, isUserSpeaking } =
-    useAudioLevel(isListening);
+  const navigate = useNavigate();
+  const {
+    isSpeaking,
+    stopSpeaking,
+    speakWithAnalysis,
+    audioLevel,
+    isUserSpeaking,
+  } = useAudioLevel(isListening);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const lastProcessedMessageRef = useRef<string>("");
 
   const [isIOS, setIsIOS] = useState(false);
-  const [permissionStatus, setPermissionStatus] = useState<"unknown" | "granted" | "denied">(
-    "unknown"
-  );
+  const [permissionStatus, setPermissionStatus] = useState<
+    "unknown" | "granted" | "denied"
+  >("unknown");
 
   // Add state to track input mode
   const [inputMode, setInputMode] = useState<"voice" | "text">("text");
@@ -76,12 +82,18 @@ function App() {
     };
     window.addEventListener("resize", handleResize);
     if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleVisualViewportChange);
+      window.visualViewport.addEventListener(
+        "resize",
+        handleVisualViewportChange
+      );
     }
     return () => {
       window.removeEventListener("resize", handleResize);
       if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", handleVisualViewportChange);
+        window.visualViewport.removeEventListener(
+          "resize",
+          handleVisualViewportChange
+        );
       }
     };
   }, []);
@@ -104,7 +116,10 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (messagesEndRef.current && chatContainerRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+        messagesEndRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
       }
     }, 100);
     return () => clearTimeout(timer);
@@ -222,7 +237,8 @@ function App() {
       !isSpeaking &&
       messages.length >= 2
     ) {
-      lastProcessedMessageRef.current = lastMessage._id || lastMessage.timestamp.toString();
+      lastProcessedMessageRef.current =
+        lastMessage._id || lastMessage.timestamp.toString();
       setTimeout(() => {
         resumeAudioContext().then(() => speakWithAnalysis(lastMessage.text));
       }, 800);
@@ -275,7 +291,7 @@ function App() {
       setErrorMessage(
         "Failed to upload file. Please check your connection and try again."
       );
-    } 
+    }
   };
 
   if (isLoading) return <LoadingScreen progress={loadingProgress} />;
@@ -572,7 +588,7 @@ function App() {
                     )}
                     <button
                       type="button"
-                      onClick={() => setShowVoiceOverlay(true)}
+                      onClick={() => navigate(`/voice/${selectedChatId}`)}
                       className={`p-3 rounded-full transition-all duration-300 text-gray-400 hover:text-white bg-slate-800/60 hover:bg-slate-700/60`}
                       title="Start voice input"
                     >

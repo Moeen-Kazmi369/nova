@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useConversation, MessageEvent } from "@elevenlabs/react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Menu } from "lucide-react";
 import { CircularWaveform } from "../components/CircularWaveform";
 import { MenuOverlay } from "../components/MenuOverlay";
 
-const VoiceModePage: React.FC = () => {
-  const navigate = useNavigate();
+const CurrentChatVoiceModePage: React.FC = () => {
+    const navigate = useNavigate();
+    const { id: selectedChatId } = useParams<{ id: string }>();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
@@ -70,22 +71,19 @@ const VoiceModePage: React.FC = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     return user.token;
   };
-  console.log(transcripts);
   const handleSaveSession = async () => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = user?.user?._id;
     const latestTranscripts = transcriptsRef.current;
-    console.log(userId);
     console.log(latestTranscripts);
-    if (!userId || latestTranscripts.length <= 0) {
-      return console.warn("No user or transcripts to save");
+    console.log(selectedChatId);
+    if (!selectedChatId || latestTranscripts.length <= 0) {
+      return console.warn("No chat selected or transcripts to save");
     }
 
     try {
       const token = getToken();
       if (!token) return;
       const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_API_URI}/api/chat/voice-chat/save`,
+        `${import.meta.env.VITE_BACKEND_API_URI}/api/chat/voice-chat/append`,
         {
           method: "POST",
           headers: {
@@ -93,7 +91,7 @@ const VoiceModePage: React.FC = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            userId,
+            chatId:selectedChatId,
             transcripts: latestTranscripts,
           }),
         }
@@ -203,4 +201,4 @@ const VoiceModePage: React.FC = () => {
   );
 };
 
-export default VoiceModePage;
+export default CurrentChatVoiceModePage;
