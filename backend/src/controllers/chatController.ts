@@ -8,19 +8,21 @@ import path from 'path';
 import Tesseract from 'tesseract.js';
 import OpenAI from 'openai';
 import pdfjs from "pdfjs-dist/legacy/build/pdf.js";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 const { getDocument } = pdfjs;
 import { createCanvas } from "canvas";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-
 // List all chats for the user
 export const listChats = async (req: any, res: Response) => {
   try {
-    const chats = await Chat.find({ user: req.user.id }).sort({ updatedAt: -1 });
+    const chats = await Chat.find({ user: req.user.id }).sort({
+      updatedAt: -1,
+    });
     res.json(chats);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch chats' });
+    res.status(500).json({ error: "Failed to fetch chats" });
   }
 };
 
@@ -30,27 +32,30 @@ export const createChat = async (req: any, res: Response) => {
     const chat = await Chat.create({ user: req.user.id });
     res.status(201).json(chat);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create chat' });
+    res.status(500).json({ error: "Failed to create chat" });
   }
 };
 
 // Delete a chat
 export const deleteChat = async (req: any, res: Response) => {
   try {
-    const chat = await Chat.findOneAndDelete({ _id: req.params.chatId, user: req.user.id });
-    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    const chat = await Chat.findOneAndDelete({
+      _id: req.params.chatId,
+      user: req.user.id,
+    });
+    if (!chat) return res.status(404).json({ error: "Chat not found" });
     await Message.deleteMany({ _id: { $in: chat.messages } });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to delete chat' });
+    res.status(500).json({ error: "Failed to delete chat" });
   }
 };
 
 // Rename a chat
 export const renameChat = async (req: any, res: Response) => {
   const { title } = req.body;
-  if (typeof title !== 'string' || !title.trim()) {
-    return res.status(400).json({ error: 'Invalid title' });
+  if (typeof title !== "string" || !title.trim()) {
+    return res.status(400).json({ error: "Invalid title" });
   }
   try {
     const chat = await Chat.findOneAndUpdate(
@@ -58,33 +63,39 @@ export const renameChat = async (req: any, res: Response) => {
       { title, updatedAt: new Date() },
       { new: true }
     );
-    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    if (!chat) return res.status(404).json({ error: "Chat not found" });
     res.json(chat);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to rename chat' });
+    res.status(500).json({ error: "Failed to rename chat" });
   }
 };
 
 // Get messages for a chat
 export const getChatMessages = async (req: any, res: Response) => {
   try {
-    const chat = await Chat.findOne({ _id: req.params.chatId, user: req.user.id }).populate('messages');
-    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    const chat = await Chat.findOne({
+      _id: req.params.chatId,
+      user: req.user.id,
+    }).populate("messages");
+    if (!chat) return res.status(404).json({ error: "Chat not found" });
     res.json(chat.messages);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch messages' });
+    res.status(500).json({ error: "Failed to fetch messages" });
   }
 };
 
 // Add a message to a chat
 export const addMessageToChat = async (req: any, res: Response) => {
   const { text, isUser } = req.body;
-  if (typeof text !== 'string' || typeof isUser !== 'boolean') {
-    return res.status(400).json({ error: 'Invalid message format' });
+  if (typeof text !== "string" || typeof isUser !== "boolean") {
+    return res.status(400).json({ error: "Invalid message format" });
   }
   try {
-    const chat = await Chat.findOne({ _id: req.params.chatId, user: req.user.id });
-    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    const chat = await Chat.findOne({
+      _id: req.params.chatId,
+      user: req.user.id,
+    });
+    if (!chat) return res.status(404).json({ error: "Chat not found" });
     const message = await Message.create({
       user: req.user.id,
       text,
@@ -96,33 +107,40 @@ export const addMessageToChat = async (req: any, res: Response) => {
     await chat.save();
     res.status(201).json(message);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to add message' });
+    res.status(500).json({ error: "Failed to add message" });
   }
 };
 
 export const uploadFileToChat = async (req: any, res: Response) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
+    return res.status(400).json({ error: "No file uploaded" });
   }
   const filePath = req.file.path;
   const fileExt = path.extname(req.file.originalname).toLowerCase();
-  let extractedText = '';
+  let extractedText = "";
   try {
-    if (fileExt === '.pdf') {
-      const pdfParse = (await import('pdf-parse')).default;
+    if (fileExt === ".pdf") {
+      const pdfParse = (await import("pdf-parse")).default;
       const dataBuffer = fs.readFileSync(filePath);
       const data = await pdfParse(dataBuffer);
       extractedText = data.text;
-    } else if ([ '.png', '.jpg', '.jpeg', '.bmp', '.gif', '.webp' ].includes(fileExt)) {
-      const { data: { text } } = await Tesseract.recognize(filePath, 'eng');
+    } else if (
+      [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"].includes(fileExt)
+    ) {
+      const {
+        data: { text },
+      } = await Tesseract.recognize(filePath, "eng");
       extractedText = text;
     } else {
-      extractedText = fs.readFileSync(filePath, 'utf-8');
+      extractedText = fs.readFileSync(filePath, "utf-8");
     }
-    const chat = await Chat.findOne({ _id: req.params.chatId, user: req.user.id });
+    const chat = await Chat.findOne({
+      _id: req.params.chatId,
+      user: req.user.id,
+    });
     if (!chat) {
       fs.unlink(filePath, () => {});
-      return res.status(404).json({ error: 'Chat not found' });
+      return res.status(404).json({ error: "Chat not found" });
     }
     const message = await Message.create({
       user: req.user.id,
@@ -134,10 +152,12 @@ export const uploadFileToChat = async (req: any, res: Response) => {
     chat.updatedAt = new Date();
     await chat.save();
     fs.unlink(filePath, () => {});
-    res.status(201).json({ message: 'File processed and message added', extractedText });
+    res
+      .status(201)
+      .json({ message: "File processed and message added", extractedText });
   } catch (err: any) {
     fs.unlink(filePath, () => {});
-    res.status(500).json({ error: err.message || 'Failed to process file' });
+    res.status(500).json({ error: err.message || "Failed to process file" });
   }
 };
 
@@ -154,7 +174,6 @@ export const uploadMessageWithFile = async (req: any, res: any) => {
   try {
     // Handle different file types
     if (fileExt === ".pdf") {
-      const pdfParse = (await import("pdf-parse")).default;
       const dataBuffer = fs.readFileSync(filePath);
       const data = await pdfParse(dataBuffer);
       extractedText = data.text;

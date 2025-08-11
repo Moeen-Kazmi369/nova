@@ -43,6 +43,7 @@ function App() {
   const navigate = useNavigate();
   const {
     isSpeaking,
+    setIsSpeaking,
     stopSpeaking,
     speakWithAnalysis,
     audioLevel,
@@ -285,7 +286,7 @@ function App() {
       setSelectedFile(null);
       setFilePreviewUrl(null);
       setInputValue("");
-      setIsSending(true);
+      setIsSending(false);
       await fetchMessages(selectedChatId);
     } catch (err) {
       setErrorMessage(
@@ -373,7 +374,7 @@ function App() {
                 ref={chatContainerRef}
                 className="flex-1 px-4 py-4 overflow-y-auto scrollbar-hide min-h-0"
               >
-                <div className="flex flex-col items-center justify-center mobile-safe-top">
+                <div className="flex flex-col mb-4 items-center justify-center mobile-safe-top">
                   <div className="mb-3 sm:mb-4 ">
                     <CircularWaveform
                       isActive={isListening || isSpeaking || isProcessing}
@@ -404,6 +405,7 @@ function App() {
                     message={message.text}
                     isUser={message.isUser}
                     timestamp={new Date(message.timestamp)}
+                    setIsSpeaking={setIsSpeaking}
                   />
                 ))}
                 {isProcessing && (
@@ -589,13 +591,13 @@ function App() {
                     <button
                       type="button"
                       onClick={() => navigate(`/voice/${selectedChatId}`)}
-                      className={`p-3 rounded-full transition-all duration-300 text-gray-400 hover:text-white bg-slate-800/60 hover:bg-slate-700/60`}
+                      className={`rounded-full transition-all duration-300 text-gray-400 hover:text-white bg-slate-800/60 hover:bg-slate-700/60`}
                       title="Start voice input"
                     >
                       <span className="sr-only">Start voice input</span>
                       <img
                         src={micIcone}
-                        className="w-5 h-5"
+                        className="w-8 h-8"
                         alt="Microphone"
                       />
                     </button>

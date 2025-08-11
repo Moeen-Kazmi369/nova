@@ -288,9 +288,10 @@ export function useAudioLevel(isListeningFromApp: boolean = false) {
 
   return {
     audioLevel,
+    setIsSpeaking,
     isSpeaking,
     isUserSpeaking,
     speakWithAnalysis,
-    stopSpeaking
+    stopSpeaking,
   };
 }

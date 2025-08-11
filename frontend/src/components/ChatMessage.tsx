@@ -13,6 +13,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   isUser,
   timestamp,
+  setIsSpeaking,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -47,6 +48,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 if (isPlaying) {
                   audioRef.current?.pause();
                   setIsPlaying(false);
+                  setIsSpeaking(false);
                   return;
                 }
 
@@ -74,11 +76,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   const audio = new Audio(audioUrl);
                   audioRef.current = audio;
                   setIsPlaying(true);
+                  setIsSpeaking(true);
                   setIsLoading(false);
                   audio.play();
 
-                  audio.onended = () => setIsPlaying(false);
-                  audio.onerror = () => setIsPlaying(false);
+                  audio.onended = () => {
+                    setIsPlaying(false);
+                    setIsSpeaking(false);
+                  };
+                  audio.onerror = () => {
+                    setIsPlaying(false);
+                    setIsSpeaking(false);
+                  };
                 } catch (error) {
                   console.error("Speech error:", error);
                   setIsLoading(false);

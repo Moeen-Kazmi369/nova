@@ -4,63 +4,67 @@ import { useNavigate } from 'react-router-dom';
 
 import ChatIcon from '../assets/ChatMode.svg';
 import VoiceIcon from '../assets/VoiceMode.svg';
-import SettingsIcon from '../assets/Settings.svg';
-import AboutIcon from '../assets/About.svg';
-import WaveIcon from '../assets/WaveIcon.png'; // 👈 New icon import
+import micIcone from "../assets/Icon.png";
+import SettingsIcon from "../assets/Settings.svg";
+import AboutIcon from "../assets/About.svg";
+import WaveIcon from "../assets/WaveIcon.png"; // 👈 New icon import
 
 interface MenuOverlayProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose }) => {
+export const MenuOverlay: React.FC<MenuOverlayProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const navigate = useNavigate();
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : '';
+    document.body.style.overflow = isOpen ? "hidden" : "";
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [isOpen]);
 
   const menuItems = [
     {
       icon: ChatIcon,
-      title: 'Chat Mode',
-      description: 'Full conversation with message history',
+      title: "Chat Mode",
+      description: "Full conversation with message history",
       action: () => {
-        navigate('/');
+        navigate("/");
         onClose();
       },
-      current: window.location.pathname === '/',
+      current: window.location.pathname === "/",
     },
     {
-      icon: VoiceIcon,
-      title: 'Voice Mode',
-      description: 'Pure voice interaction with NOVA 1000™',
+      icon: micIcone,
+      title: "Voice Mode",
+      description: "Pure voice interaction with NOVA 1000™",
       action: () => {
-        navigate('/voice');
+        navigate("/voice");
         onClose();
       },
-      current: window.location.pathname === '/voice',
+      current: window.location.pathname === "/voice",
     },
     {
       icon: SettingsIcon,
-      title: 'Settings',
-      description: 'Customize your NOVA experience',
+      title: "Settings",
+      description: "Customize your NOVA experience",
       action: onClose,
       current: false,
     },
     {
       icon: AboutIcon,
-      title: 'About',
-      description: 'Learn about the Dimensional Integrity Engine',
+      title: "About",
+      description: "Learn about the Dimensional Integrity Engine",
       action: () => {
-        navigate('/about');
+        navigate("/about");
         onClose();
       },
-      current: window.location.pathname === '/about',
+      current: window.location.pathname === "/about",
     },
   ];
 
@@ -83,7 +87,8 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose }) => 
             className="w-14 h-14 object-contain mx-auto mb-3"
           />
           <h2 className="text-xl font-light text-white tracking-wider mb-1">
-            NOVA 1000<span className="text-xs align-top ml-1 text-gray-400">™</span>
+            NOVA 1000
+            <span className="text-xs align-top ml-1 text-gray-400">™</span>
           </h2>
           <p className="text-gray-400 text-sm">Choose your interaction mode</p>
         </div>
@@ -96,8 +101,8 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose }) => 
               onClick={item.action}
               className={`w-full p-4 rounded-xl border transition-all duration-300 group ${
                 item.current
-                  ? 'bg-slate-800/80 border-slate-600/60 ring-2 ring-cyan-400/30'
-                  : 'bg-slate-800/40 border-slate-700/40 hover:bg-slate-800/60 hover:border-slate-600/60'
+                  ? "bg-slate-800/80 border-slate-600/60 ring-2 ring-cyan-400/30"
+                  : "bg-slate-800/40 border-slate-700/40 hover:bg-slate-800/60 hover:border-slate-600/60"
               }`}
             >
               <div className="flex items-center space-x-3">
@@ -139,7 +144,7 @@ export const MenuOverlay: React.FC<MenuOverlayProps> = ({ isOpen, onClose }) => 
       <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
       <div
         className="absolute bottom-1/4 right-1/4 w-24 h-24 bg-cyan-400/10 rounded-full blur-2xl animate-pulse"
-        style={{ animationDelay: '1s' }}
+        style={{ animationDelay: "1s" }}
       />
     </div>
   );
