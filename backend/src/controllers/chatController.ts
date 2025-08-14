@@ -12,7 +12,7 @@ import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 const { getDocument } = pdfjs;
 import { createCanvas } from "canvas";
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY  });
 
 // List all chats for the user
 export const listChats = async (req: any, res: Response) => {

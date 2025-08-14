@@ -4,6 +4,7 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import cors from "cors";
 import chatRoutes from "./routes/chat.routes.js";
+import modelConfigsRoutes from "./routes/modelConfigsRoutes.js";
 import { VercelRequest, VercelResponse } from "@vercel/node";
 
 dotenv.config();
@@ -38,6 +39,7 @@ app.get("/", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/model-configs", modelConfigsRoutes);
 
 // Initialize DB once per cold start
 let dbInitialized = false;
