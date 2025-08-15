@@ -131,86 +131,119 @@ export const useChats = () => {
   }, [selectedChatId]);
 
   // Helper: Call OpenAI API with chat history
-  async function getGPTResponse(messages: { role: string; content: string }[]): Promise<string> {
+  async function getGPTResponse(
+    messages: { role: string; content: string }[]
+  ): Promise<string> {
+    const modelConfigs = await axios.post(
+      `${import.meta.env.VITE_BACKEND_API_URI}/api/model-configs/admin-get`
+    );
+    const modelConfig = modelConfigs?.configs[0];
+    const systemPrompt =
+      modelConfig?.systemPrompt || "You are a helpful assistant.";
+    const updatedMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages,
+    ];
+    console.log(updatedMessages);
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
+        Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model: "gpt-4o",
-        messages
-      })
+        messages: updatedMessages,
+        temperature: modelConfig?.temperature || 0.7,
+        max_tokens: modelConfig?.maxTokens || 512,
+      }),
     });
     const data = await res.json();
     return data.choices?.[0]?.message?.content || "No response generated.";
   }
 
   // Process a user message and get real AI response
-  const processMessage = useCallback(async (userMessage: string) => {
-    setIsProcessing(true);
-    // 1. Add user message to backend
-    await addMessage(userMessage, true);
+  const processMessage = useCallback(
+    async (userMessage: string) => {
+      setIsProcessing(true);
+      // 1. Add user message to backend
+      await addMessage(userMessage, true);
 
-    // --- Auto-generate chat title if needed ---
-    // Only do this if the chat exists, has the default title, and this is the first user message
-    const currentChat = chats.find(c => c._id === selectedChatId);
-    if (currentChat && currentChat.title === 'New Chat' && messages.length === 0) {
-      try {
-        // Use OpenAI to generate a short title from the first user message
-        const prompt = `Generate a short, descriptive title (max 6 words, no quotes) for this conversation based on the following message.\nMessage: ${userMessage}`;
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            messages: [
-              { role: "system", content: "You are a helpful assistant that creates short, descriptive chat titles." },
-              { role: "user", content: prompt }
-            ],
-            max_tokens: 16,
-            temperature: 0.5
-          })
-        });
-        const data = await res.json();
-        let title = data.choices?.[0]?.message?.content?.trim() || "New Chat";
-        // Remove quotes if present
-        if (title.startsWith('"') && title.endsWith('"')) {
-          title = title.slice(1, -1);
+      // --- Auto-generate chat title if needed ---
+      // Only do this if the chat exists, has the default title, and this is the first user message
+      const currentChat = chats.find((c) => c._id === selectedChatId);
+      if (
+        currentChat &&
+        currentChat.title === "New Chat" &&
+        messages.length === 0
+      ) {
+        try {
+          // Use OpenAI to generate a short title from the first user message
+          const prompt = `Generate a short, descriptive title (max 6 words, no quotes) for this conversation based on the following message.\nMessage: ${userMessage}`;
+          const res = await fetch(
+            "https://api.openai.com/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+              },
+              body: JSON.stringify({
+                model: "gpt-4o",
+                messages: [
+                  {
+                    role: "system",
+                    content:
+                      "You are a helpful assistant that creates short, descriptive chat titles.",
+                  },
+                  { role: "user", content: prompt },
+                ],
+                max_tokens: 16,
+                temperature: 0.5,
+              }),
+            }
+          );
+          const data = await res.json();
+          let title = data.choices?.[0]?.message?.content?.trim() || "New Chat";
+          // Remove quotes if present
+          if (title.startsWith('"') && title.endsWith('"')) {
+            title = title.slice(1, -1);
+          }
+          if (title && title !== "New Chat") {
+            await renameChat(currentChat._id, title);
+          }
+        } catch (err) {
+          // Fail silently, keep default title
         }
-        if (title && title !== "New Chat") {
-          await renameChat(currentChat._id, title);
-        }
-      } catch (err) {
-        // Fail silently, keep default title
       }
-    }
-    // --- End auto-title logic ---
-
-    // 2. Prepare chat history for OpenAI
-    const openAIMessages = [
-      ...messages.map(m => ({ role: m.isUser ? 'user' : 'assistant', content: m.text })),
-      { role: 'user', content: userMessage }
-    ];
-    // 3. Get AI response from OpenAI
-    let aiResponse = '';
-    try {
-      aiResponse = await getGPTResponse(openAIMessages);
-    } catch (err) {
-      aiResponse = "I'm having trouble processing your request right now.";
-    }
-    // 4. Add AI response to backend
-    await addMessage(aiResponse, false);
-    // 5. Optionally, speak the AI response
-    // try {
-    //   await speakWithAnalysis(aiResponse);
-    // } catch {}
-    setIsProcessing(false);
-  }, [addMessage, messages, chats, selectedChatId, renameChat, speakWithAnalysis]);
+      // --- End auto-title logic ---
+      // 2. Prepare chat history for OpenAI
+      const openAIMessages = [
+        ...messages.map((m) => ({
+          role: m.isUser ? "user" : "assistant",
+          content: m.text,
+        })),
+        { role: "user", content: userMessage },
+      ];
+      // 3. Get AI response from OpenAI
+      let aiResponse = "";
+      try {
+        console.log("Processing message:", openAIMessages);
+        aiResponse = await getGPTResponse(openAIMessages);
+        console.log(aiResponse);
+      } catch (err) {
+        aiResponse = "I'm having trouble processing your request right now.";
+      }
+      // 4. Add AI response to backend
+      await addMessage(aiResponse, false);
+      // 5. Optionally, speak the AI response
+      // try {
+      //   await speakWithAnalysis(aiResponse);
+      // } catch {}
+      setIsProcessing(false);
+    },
+    [addMessage, messages, chats, selectedChatId, renameChat, speakWithAnalysis]
+  );
 //comment
   return {
     chats,

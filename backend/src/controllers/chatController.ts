@@ -3,16 +3,17 @@ import { Request, Response } from 'express';
 
 import Chat from '../models/Chat.js';
 import Message from '../models/Message.js';
-import fs from 'fs';
-import path from 'path';
-import Tesseract from 'tesseract.js';
-import OpenAI from 'openai';
+import ModelConfig from "../models/modelConfigModel.js";
+import fs from "fs";
+import path from "path";
+import Tesseract from "tesseract.js";
+import OpenAI from "openai";
 import pdfjs from "pdfjs-dist/legacy/build/pdf.js";
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 const { getDocument } = pdfjs;
 import { createCanvas } from "canvas";
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY  });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // List all chats for the user
 export const listChats = async (req: any, res: Response) => {
@@ -119,7 +120,15 @@ export const uploadMessageWithFile = async (req: any, res: any) => {
   const filePath = req.file.path;
   const fileExt = path.extname(req.file.originalname).toLowerCase();
   let extractedText = "";
-  let messages: any[] = [{ role: "user", content: [] }];
+  let messages: any[] = [
+    {
+      role: "system",
+      content:
+        (await ModelConfig.findOne().exec())?.systemPrompt ||
+        "You are a helpful assistant.",
+    },
+    { role: "user", content: [] },
+  ];
 
   try {
     // Handle different file types
@@ -127,7 +136,7 @@ export const uploadMessageWithFile = async (req: any, res: any) => {
       const dataBuffer = fs.readFileSync(filePath);
       const data = await pdfParse(dataBuffer);
       extractedText = data.text;
-      messages[0].content.push({
+      messages[1].content.push({
         type: "text",
         text: `${req.body.prompt}\n\n[File Content]:\n${extractedText}`,
       });
@@ -145,7 +154,7 @@ export const uploadMessageWithFile = async (req: any, res: any) => {
       } = await Tesseract.recognize(filePath, "eng");
       extractedText = text;
 
-      messages[0].content.push(
+      messages[1].content.push(
         {
           type: "text",
           text: `${req.body.prompt}\n\n[Extracted Text from Image]:\n${extractedText}`,
@@ -159,7 +168,7 @@ export const uploadMessageWithFile = async (req: any, res: any) => {
       );
     } else {
       extractedText = fs.readFileSync(filePath, "utf-8");
-      messages[0].content.push({
+      messages[1].content.push({
         type: "text",
         text: `${req.body.prompt}\n\n[File Content]:\n${extractedText}`,
       });

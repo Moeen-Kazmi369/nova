@@ -1,11 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import axios from "axios";
 import { Loader2, Send, Plus, Menu } from "lucide-react";
 import micIcone from "./assets/Icon.png";
 import { ChatMessage } from "./components/ChatMessage";
 import { TextInput } from "./components/TextInput";
 import { CircularWaveform } from "./components/CircularWaveform";
+import OpenAI from "openai";
+import * as pdfjsLib from "pdfjs-dist";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.5.136/pdf.worker.min.js"; // Use a recent CDN version; adjust if needed for your setup
+
 const initialConfig = {
   modelName: "NOVA 1000",
   temperature: 0.7,
@@ -25,86 +31,211 @@ const ModelConfigs = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
-  const [selectedChatId, setSelectedChatId] = useState(null);
 
   const [isDesktop] = useState(true); // adjust detection logic if needed
   const [isIOS] = useState(false); // adjust detection logic if needed
   const [permissionStatus] = useState("granted");
   const [isUserSpeaking] = useState(false);
   const [audioLevel] = useState(0);
-
+  const [isSave, setSetIsSave] = useState(false);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
 
+  const openai = new OpenAI({
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true,
+  });
+
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // }, [messages, isProcessing]);
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isProcessing]);
+    const fetchConfigs = async () => {
+      try {
+        const token = JSON.parse(localStorage.getItem("user") || "{}")?.token;
+        const userId = JSON.parse(localStorage.getItem("user") || "{}")?.user
+          ?._id;
+        const { data } = await axios.post(
+          `${import.meta.env.VITE_BACKEND_API_URI}/api/model-configs/admin-get`,
+          { userId: userId }, // Replace with actual admin userId
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (data.configs && data.configs.length > 0) {
+          // Assuming you want the first config for default
+          setConfig(data.configs[0]);
+        }
+      } catch (err) {
+        toast.error(err.response?.data?.error || "Failed to load ModelConfigs");
+      }
+    };
+
+    fetchConfigs();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setConfig((prev) => ({
       ...prev,
-      [name]: name === "temperature" || name === "maxTokens" ? Number(value) : value,
+      [name]:
+        name === "temperature" || name === "maxTokens" ? Number(value) : value,
     }));
   };
 
   const handleSave = async () => {
+    setSetIsSave(true);
     try {
+      const token = JSON.parse(localStorage.getItem("user") || "{}")?.token;
       const { data } = await axios.post(
         `${import.meta.env.VITE_BACKEND_API_URI}/api/model-configs/save`,
         config,
+        { headers: { Authorization: `Bearer ${token}` } },
         { withCredentials: true }
       );
       toast.success(data.message);
       setConfig(data.config);
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to save ModelConfig");
+    } finally {
+      setSetIsSave(false);
     }
   };
 
-  const fetchMessages = async (chatId) => {
+  const handleSendMessage = async (text) => {
+    if (!text.trim()) return;
+    const newMessages = [
+      ...messages,
+      { text, isUser: true, timestamp: new Date() },
+    ];
+    setMessages(newMessages);
+    setInputValue("");
+    setIsProcessing(true);
     try {
-      const token = JSON.parse(localStorage.getItem("user") || "{}").token;
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_BACKEND_API_URI}/api/chat/${chatId}/messages`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setMessages(data.messages);
+      const chatMessages = [
+        { role: "system", content: config.systemPrompt },
+        ...newMessages.map((m) => ({
+          role: m.isUser ? "user" : "assistant",
+          content: m.text,
+        })),
+      ];
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o", // Hardcoded to a valid OpenAI model (supports vision); change if needed
+        messages: chatMessages,
+        temperature: config.temperature,
+        max_tokens: config.maxTokens,
+      });
+      const assistantText = response.choices[0].message.content;
+      setMessages([
+        ...newMessages,
+        { text: assistantText, isUser: false, timestamp: new Date() },
+      ]);
     } catch (err) {
-      console.error("Failed to fetch messages", err);
+      setErrorMessage("Failed to get response from OpenAI");
+      console.error(err);
     }
+    setIsProcessing(false);
   };
 
-  const handleSendFilePrompt = async (prompt) => {
-    if (!selectedFile || !selectedChatId || !prompt.trim()) return;
+  const handleSendFile = async (prompt) => {
+    if (!selectedFile || !prompt.trim()) return;
     setIsSending(true);
     setErrorMessage(null);
+    let userContent;
     try {
-      const token = JSON.parse(localStorage.getItem("user") || "{}").token;
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("prompt", prompt);
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_BACKEND_API_URI}/api/chat/${selectedChatId}/upload-message`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
+      // File size check (5MB limit)
+      const maxFileSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (selectedFile.size > maxFileSize) {
+        toast.error(
+          "File size exceeds 5MB limit. Please upload a smaller file."
+        );
+        setIsSending(false);
+        return;
+      }
+      if (selectedFile.type.startsWith("image/")) {
+        const supportedFormats = [
+          "image/png",
+          "image/jpeg",
+          "image/gif",
+          "image/webp",
+        ];
+        if (!supportedFormats.includes(selectedFile.type)) {
+          toast.error(
+            "Unsupported image format. Please use PNG, JPEG, GIF, or WebP."
+          );
+          setIsSending(false);
+          return;
         }
-      );
-      setSelectedFile(null);
-      setFilePreviewUrl(null);
-      setInputValue("");
-      setIsSending(false);
-      await fetchMessages(selectedChatId);
+        const reader = new FileReader();
+        reader.readAsDataURL(selectedFile);
+        await new Promise((resolve) => (reader.onload = resolve));
+        const base64 = reader.result;
+        userContent = [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: base64 } },
+        ];
+      } else if (selectedFile.type.startsWith("text/")) {
+        const reader = new FileReader();
+        reader.readAsText(selectedFile);
+        await new Promise((resolve) => (reader.onload = resolve));
+        const fileText = reader.result;
+        userContent = `Text from file "${selectedFile.name}":\n${fileText}\n\nUser prompt: ${prompt}`;
+      } else if (selectedFile.type === "application/pdf") {
+        const arrayBuffer = await selectedFile.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        let text = "";
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const textContent = await page.getTextContent();
+          text += textContent.items.map((item) => item.str).join(" ") + "\n\n";
+        }
+        userContent = `Extracted text from PDF "${selectedFile.name}":\n${text}\n\nUser prompt: ${prompt}`;
+      } else {
+        toast.error("Unsupported file type");
+        setIsSending(false);
+        return;
+      }
     } catch (err) {
-      setErrorMessage("Failed to upload file. Please check your connection and try again.");
+      toast.error("Failed to process file");
+      console.error(err);
       setIsSending(false);
+      return;
     }
+
+    const newMessages = [
+      ...messages,
+      { text: prompt, isUser: true, timestamp: new Date() },
+    ];
+    setMessages(newMessages);
+    setSelectedFile(null);
+    setFilePreviewUrl(null);
+    setInputValue("");
+    setIsProcessing(true);
+    try {
+      const chatMessages = [
+        { role: "system", content: config.systemPrompt },
+        ...newMessages.map((m) => ({
+          role: m.isUser ? "user" : "assistant",
+          content: m.text,
+        })),
+      ];
+      chatMessages[chatMessages.length - 1].content = userContent;
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o", // Hardcoded to a valid OpenAI model (supports vision); change if needed
+        messages: chatMessages,
+        temperature: config.temperature,
+        max_tokens: config.maxTokens,
+      });
+      const assistantText = response.choices[0].message.content;
+      setMessages([
+        ...newMessages,
+        { text: assistantText, isUser: false, timestamp: new Date() },
+      ]);
+    } catch (err) {
+      setErrorMessage("Failed to process file with OpenAI");
+      console.error(err);
+    }
+    setIsProcessing(false);
+    setIsSending(false);
   };
 
   const handleFileSelect = (e) => {
@@ -114,26 +245,8 @@ const ModelConfigs = () => {
     setFilePreviewUrl(URL.createObjectURL(file));
   };
 
-  const handleTextSubmit = async (text) => {
-    if (!text.trim() || !selectedChatId) return;
-    setIsProcessing(true);
-    try {
-      const token = JSON.parse(localStorage.getItem("user") || "{}").token;
-      await axios.post(
-        `${import.meta.env.VITE_BACKEND_API_URI}/api/chat/${selectedChatId}/message`,
-        { text },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setInputValue("");
-      await fetchMessages(selectedChatId);
-    } catch (err) {
-      setErrorMessage("Failed to send message");
-    }
-    setIsProcessing(false);
-  };
-
   return (
-    <div className="flex min-h-screen bg-[#020617] text-white">
+    <div className="flex min-h-screen overflow-auto bg-[#020617] text-white">
       {/* Left: Config Section */}
       <div className="w-1/3 bg-slate-900 p-8 border-r border-slate-800 flex flex-col gap-6">
         <h2 className="text-2xl font-bold mb-4">Configure Nova 1000</h2>
@@ -185,10 +298,14 @@ const ModelConfigs = () => {
           />
         </label>
         <button
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="mt-4 px-4 py-2 flex justify-center items-center bg-blue-600 text-white rounded hover:bg-blue-700"
           onClick={handleSave}
         >
-          Save Settings
+          {isSave ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            "Save Config"
+          )}
         </button>
       </div>
 
@@ -275,7 +392,7 @@ const ModelConfigs = () => {
                           setFilePreviewUrl(null);
                           setInputValue("");
                         }}
-                        disabled={isUploading}
+                        disabled={isSending}
                         title="Remove"
                       >
                         ✕
@@ -296,23 +413,21 @@ const ModelConfigs = () => {
                     placeholder="Message NOVA 1000™"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    disabled={isUploading}
+                    disabled={isSending}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
-                        handleSendFilePrompt(inputValue);
+                        handleSendFile(inputValue);
                       }
                     }}
                   />
                 </div>
                 <button
                   className={`ml-2 bg-transparent text-gray-400 hover:text-white transition-all duration-200 rounded px-3 py-1 text-xs ${
-                    isUploading || !inputValue.trim()
-                      ? "opacity-50 cursor-not-allowed"
-                      : ""
+                    !inputValue.trim() ? "opacity-50 cursor-not-allowed" : ""
                   }`}
-                  onClick={() => handleSendFilePrompt(inputValue)}
-                  disabled={isUploading || !inputValue.trim() || isSending}
+                  onClick={() => handleSendFile(inputValue)}
+                  disabled={!inputValue.trim() || isSending}
                 >
                   {isSending ? (
                     <Loader2 className="w-6 h-6 animate-spin" />
@@ -326,9 +441,9 @@ const ModelConfigs = () => {
             {!selectedFile && (
               <div className="flex items-center space-x-2">
                 <TextInput
-                  onSubmit={handleTextSubmit}
+                  onSubmit={handleSendMessage}
                   placeholder="Message NOVA 1000™"
-                  disabled={isProcessing || isUploading || isSending}
+                  disabled={isProcessing || isSending}
                   value={inputValue}
                   setValue={setInputValue}
                 />
@@ -336,7 +451,7 @@ const ModelConfigs = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-between mb-2 sm:mb-0">
+          {/* <div className="flex items-center justify-between mb-2 sm:mb-0">
             <div className="flex items-center space-x-3">
               <label
                 className="p-2 rounded-xl cursor-pointer text-gray-400 hover:text-white transition-all duration-200"
@@ -347,13 +462,9 @@ const ModelConfigs = () => {
                   accept="*"
                   style={{ display: "none" }}
                   onChange={handleFileSelect}
-                  disabled={isProcessing || isUploading}
+                  disabled={isProcessing}
                 />
-                {isUploading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Plus className="w-5 h-5" />
-                )}
+                <Plus className="w-5 h-5" />
               </label>
               <button
                 onClick={() => console.log("Menu opened")}
@@ -421,7 +532,7 @@ const ModelConfigs = () => {
                 <img src={micIcone} className="w-8 h-8" alt="Microphone" />
               </button>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
