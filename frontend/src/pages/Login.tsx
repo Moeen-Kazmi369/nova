@@ -12,6 +12,11 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const redirect = new URLSearchParams(location.search).get("redirect") || "/";
+  React.useEffect(() => {
+    if (location.state?.email) {
+      setEmail(location.state.email);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +24,7 @@ const Login = () => {
 
     try {
       const { data } = await axios.post(`${import.meta.env.VITE_BACKEND_API_URI}/api/auth/login`, {
-      email,
+        email,
         password,
       });
       toast.success("Login successful");
@@ -46,9 +51,9 @@ const Login = () => {
           <div className="flex flex-col justify-center items-center mb-8">
             <img src={Icon} alt="logo" className="w-[130px] " />
             <h2 className="text-2xl font-bold text-center">
-            NOVA 1000<span className="text-sm align-top ml-1 text-gray-400">™</span>
-         
-          </h2>
+              NOVA 1000<span className="text-sm align-top ml-1 text-gray-400">™</span>
+
+            </h2>
             {/* <h2 className="text-2xl font-bold text-center">Nova</h2> */}
             <p className="text-center">Please enter your credentials to sign in.</p>
           </div>

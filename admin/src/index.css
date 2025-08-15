@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+
+/* Ensure dark theme is applied globally */
+html {
+  background-color: #020617 !important;
+  color: white !important;
+}
+
+body {
+  background-color: #020617 !important;
+  color: white !important;
+}
+
+#root {
+  background-color: #020617 !important;
+  color: white !important;
+}
+
+/* Hide scrollbars globally but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ensure body and html don't show scrollbars and prevent overflow */
+html, body, #root {
+  overflow: hidden;
+  height: 100%;
+  height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
+  margin: 0;
+  padding: 0;
+}
+
+/* Prevent horizontal scrolling on all elements */
+* {
+  box-sizing: border-box;
+}
+
+/* Enhanced safe area utilities for mobile devices */
+.pb-safe {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+.pt-safe {
+  padding-top: max(1.5rem, env(safe-area-inset-top));
+}
+
+.pl-safe {
+  padding-left: max(1rem, env(safe-area-inset-left));
+}
+
+.pr-safe {
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+/* Mobile-specific safe areas - Optimized for iPhone 15 Pro with Chrome */
+.mobile-safe-top {
+  padding-top: max(1.5rem, env(safe-area-inset-top));
+}
+
+.mobile-safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  margin-bottom: 60px; /* Extra space for Chrome's bottom bar */
+}
+
+/* Enhanced touch targets for mobile */
+@media (max-width: 768px) {
+  button {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  
+  /* Ensure input controls are well above browser UI */
+  .input-controls-mobile {
+    margin-bottom: 80px;
+  }
+}
+
+/* Prevent zoom on input focus on iOS */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea {
+    font-size: 16px !important;
+    transform: translateZ(0); /* Force hardware acceleration */
+  }
+}
+
+/* iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific styles */
+  .ios-fix {
+    -webkit-overflow-scrolling: touch;
+    -webkit-transform: translate3d(0, 0, 0);
+  }
+  
+  /* Prevent iOS Safari from adding rounded corners and shadows to buttons */
+  button {
+    -webkit-appearance: none;
+    border-radius: inherit;
+  }
+  
+  /* Fix for iOS viewport units */
+  .h-screen {
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+  
+  /* Additional space for Chrome on iOS */
+  .mobile-safe-bottom {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    margin-bottom: 80px; /* Extra space for Chrome's navigation bar */
+  }
+}
+
+/* Prevent pull-to-refresh on mobile */
+body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix for mobile keyboard appearing */
+@media screen and (max-height: 600px) {
+  .mobile-keyboard-adjust {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+}
+
+/* Chrome mobile browser specific adjustments */
+@media screen and (max-width: 768px) {
+  /* Ensure content doesn't get hidden behind Chrome's UI */
+  .chrome-mobile-safe {
+    padding-bottom: 100px;
+  }
+}
+/* Custom Scrollbar for overflow containers */
+.custom-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 9999px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}

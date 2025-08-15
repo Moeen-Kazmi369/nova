@@ -4,6 +4,7 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import cors from "cors";
 import chatRoutes from "./routes/chat.routes.js";
+import modelConfigsRoutes from "./routes/modelConfigsRoutes.js";
 import { VercelRequest, VercelResponse } from "@vercel/node";
 
 dotenv.config();
@@ -13,6 +14,7 @@ const app = express();
 // Middleware
 // CORS: allow multiple frontend origins
 const allowedOrigins = [
+  "https://legendary-disco-gjgqvgjqww62v447-5173.app.github.dev/",
   "http://localhost:5173",
   "https://nova-ai-frontend-nu.vercel.app",
   "https://nova-ai-frontend-iws2.vercel.app",
@@ -38,6 +40,7 @@ app.get("/", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/model-configs", modelConfigsRoutes);
 
 // Initialize DB once per cold start
 let dbInitialized = false;

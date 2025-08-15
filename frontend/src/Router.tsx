@@ -11,6 +11,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import ProtectRoutes from "./components/ProtectRoutes";
 import CurrentChatVoiceModePage from "./pages/CurrentChatVoiceModePage";
+import AccessDenied from "./pages/AccessDenied";
 
 export default function AppRouter() {
   return (
@@ -21,6 +22,7 @@ export default function AppRouter() {
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/access-denied" element={<AccessDenied />} />
         <Route element={<ProtectRoutes />}>
           <Route path="/" element={<App />} />
           <Route path="/voice" element={<VoiceModePage />} />
