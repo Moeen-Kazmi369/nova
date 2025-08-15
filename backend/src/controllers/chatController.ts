@@ -111,56 +111,6 @@ export const addMessageToChat = async (req: any, res: Response) => {
   }
 };
 
-export const uploadFileToChat = async (req: any, res: Response) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-  const filePath = req.file.path;
-  const fileExt = path.extname(req.file.originalname).toLowerCase();
-  let extractedText = "";
-  try {
-    if (fileExt === ".pdf") {
-      const pdfParse = (await import("pdf-parse")).default;
-      const dataBuffer = fs.readFileSync(filePath);
-      const data = await pdfParse(dataBuffer);
-      extractedText = data.text;
-    } else if (
-      [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"].includes(fileExt)
-    ) {
-      const {
-        data: { text },
-      } = await Tesseract.recognize(filePath, "eng");
-      extractedText = text;
-    } else {
-      extractedText = fs.readFileSync(filePath, "utf-8");
-    }
-    const chat = await Chat.findOne({
-      _id: req.params.chatId,
-      user: req.user.id,
-    });
-    if (!chat) {
-      fs.unlink(filePath, () => {});
-      return res.status(404).json({ error: "Chat not found" });
-    }
-    const message = await Message.create({
-      user: req.user.id,
-      text: extractedText,
-      isUser: true,
-      timestamp: new Date(),
-    });
-    chat.messages.push(message._id);
-    chat.updatedAt = new Date();
-    await chat.save();
-    fs.unlink(filePath, () => {});
-    res
-      .status(201)
-      .json({ message: "File processed and message added", extractedText });
-  } catch (err: any) {
-    fs.unlink(filePath, () => {});
-    res.status(500).json({ error: err.message || "Failed to process file" });
-  }
-};
-
 export const uploadMessageWithFile = async (req: any, res: any) => {
   if (!req.file || !req.body.prompt) {
     return res.status(400).json({ error: "File and prompt are required" });
@@ -290,6 +240,57 @@ export const uploadMessageWithFile = async (req: any, res: any) => {
     res.status(500).json({ error: errorMessage });
   }
 };
+export const uploadFileToChat = async (req: any, res: Response) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+  const filePath = req.file.path;
+  const fileExt = path.extname(req.file.originalname).toLowerCase();
+  let extractedText = "";
+  try {
+    if (fileExt === ".pdf") {
+      const pdfParse = (await import("pdf-parse")).default;
+      const dataBuffer = fs.readFileSync(filePath);
+      const data = await pdfParse(dataBuffer);
+      extractedText = data.text;
+    } else if (
+      [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"].includes(fileExt)
+    ) {
+      const {
+        data: { text },
+      } = await Tesseract.recognize(filePath, "eng");
+      extractedText = text;
+    } else {
+      extractedText = fs.readFileSync(filePath, "utf-8");
+    }
+    const chat = await Chat.findOne({
+      _id: req.params.chatId,
+      user: req.user.id,
+    });
+    if (!chat) {
+      fs.unlink(filePath, () => {});
+      return res.status(404).json({ error: "Chat not found" });
+    }
+    const message = await Message.create({
+      user: req.user.id,
+      text: extractedText,
+      isUser: true,
+      timestamp: new Date(),
+    });
+    chat.messages.push(message._id);
+    chat.updatedAt = new Date();
+    await chat.save();
+    fs.unlink(filePath, () => {});
+    res
+      .status(201)
+      .json({ message: "File processed and message added", extractedText });
+  } catch (err: any) {
+    fs.unlink(filePath, () => {});
+    res.status(500).json({ error: err.message || "Failed to process file" });
+  }
+};
+
+
 
 export const saveVoiceChat = async (req: Request, res: Response) => {
   const { userId, transcripts } = req.body;

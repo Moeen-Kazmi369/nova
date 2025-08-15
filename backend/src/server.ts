@@ -14,6 +14,7 @@ const app = express();
 // Middleware
 // CORS: allow multiple frontend origins
 const allowedOrigins = [
+  "https://legendary-disco-gjgqvgjqww62v447-5173.app.github.dev/",
   "http://localhost:5173",
   "https://nova-ai-frontend-nu.vercel.app",
   "https://nova-ai-frontend-iws2.vercel.app",
