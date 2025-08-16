@@ -14,6 +14,7 @@ const app = express();
 // Middleware
 // CORS: allow multiple frontend origins
 const allowedOrigins = [
+  "https://nova-rouge-eight.vercel.app",
   "http://localhost:5174",
   "http://localhost:5173",
   "https://nova-ai-frontend-nu.vercel.app",
