@@ -14,6 +14,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 const initialConfig = {
   modelName: "NOVA 1000",
+  modelDescription: "A model designed for general purpose language processing.",
   temperature: 0.7,
   maxTokens: 512,
   systemPrompt: "",
@@ -136,106 +137,40 @@ const ModelConfigs = () => {
     setIsProcessing(false);
   };
 
-  const handleSendFile = async (prompt) => {
+  // New handler for sending file+prompt
+  const handleSendFilePrompt = async (prompt) => {
     if (!selectedFile || !prompt.trim()) return;
     setIsSending(true);
     setErrorMessage(null);
-    let userContent;
     try {
-      // File size check (5MB limit)
-      const maxFileSize = 5 * 1024 * 1024; // 5MB in bytes
-      if (selectedFile.size > maxFileSize) {
-        toast.error(
-          "File size exceeds 5MB limit. Please upload a smaller file."
-        );
-        setIsSending(false);
-        return;
-      }
-      if (selectedFile.type.startsWith("image/")) {
-        const supportedFormats = [
-          "image/png",
-          "image/jpeg",
-          "image/gif",
-          "image/webp",
-        ];
-        if (!supportedFormats.includes(selectedFile.type)) {
-          toast.error(
-            "Unsupported image format. Please use PNG, JPEG, GIF, or WebP."
-          );
-          setIsSending(false);
-          return;
+      const token = JSON.parse(localStorage.getItem("user") || "{}").token;
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("prompt", prompt);
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_BACKEND_API_URI}/api/chat/upload-message`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
         }
-        const reader = new FileReader();
-        reader.readAsDataURL(selectedFile);
-        await new Promise((resolve) => (reader.onload = resolve));
-        const base64 = reader.result;
-        userContent = [
-          { type: "text", text: prompt },
-          { type: "image_url", image_url: { url: base64 } },
-        ];
-      } else if (selectedFile.type.startsWith("text/")) {
-        const reader = new FileReader();
-        reader.readAsText(selectedFile);
-        await new Promise((resolve) => (reader.onload = resolve));
-        const fileText = reader.result;
-        userContent = `Text from file "${selectedFile.name}":\n${fileText}\n\nUser prompt: ${prompt}`;
-      } else if (selectedFile.type === "application/pdf") {
-        const arrayBuffer = await selectedFile.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-        let text = "";
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-          const page = await pdf.getPage(pageNum);
-          const textContent = await page.getTextContent();
-          text += textContent.items.map((item) => item.str).join(" ") + "\n\n";
-        }
-        userContent = `Extracted text from PDF "${selectedFile.name}":\n${text}\n\nUser prompt: ${prompt}`;
-      } else {
-        toast.error("Unsupported file type");
-        setIsSending(false);
-        return;
-      }
-    } catch (err) {
-      toast.error("Failed to process file");
-      console.error(err);
-      setIsSending(false);
-      return;
-    }
-
-    const newMessages = [
-      ...messages,
-      { text: prompt, isUser: true, timestamp: new Date() },
-    ];
-    setMessages(newMessages);
-    setSelectedFile(null);
-    setFilePreviewUrl(null);
-    setInputValue("");
-    setIsProcessing(true);
-    try {
-      const chatMessages = [
-        { role: "system", content: config.systemPrompt },
-        ...newMessages.map((m) => ({
-          role: m.isUser ? "user" : "assistant",
-          content: m.text,
-        })),
-      ];
-      chatMessages[chatMessages.length - 1].content = userContent;
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o", // Hardcoded to a valid OpenAI model (supports vision); change if needed
-        messages: chatMessages,
-        temperature: config.temperature,
-        max_tokens: config.maxTokens,
-      });
-      const assistantText = response.choices[0].message.content;
+      );
       setMessages([
-        ...newMessages,
-        { text: assistantText, isUser: false, timestamp: new Date() },
+        ...messages,
+        { text: data?.userMessage, isUser: true, timestamp: new Date() },
+        { text: data?.aiMessage, isUser: false, timestamp: new Date() },
       ]);
+      setSelectedFile(null);
+      setFilePreviewUrl(null);
+      setInputValue("");
+      setIsSending(false);
     } catch (err) {
-      setErrorMessage("Failed to process file with OpenAI");
-      console.error(err);
+      setErrorMessage(
+        "Failed to upload file. Please check your connection and try again."
+      );
     }
-    setIsProcessing(false);
-    setIsSending(false);
   };
 
   const handleFileSelect = (e) => {
@@ -246,130 +181,159 @@ const ModelConfigs = () => {
   };
 
   return (
-    <div className="flex min-h-screen overflow-auto bg-[#020617] text-white">
+    <div className="flex h-screen bg-[#020617] text-white">
       {/* Left: Config Section */}
-      <div className="w-1/3 bg-slate-900 p-8 border-r border-slate-800 flex flex-col gap-6">
-        <h2 className="text-2xl font-bold mb-4">Configure Nova 1000</h2>
-        <label>
-          <span className="block mb-1 font-medium">Model Name</span>
-          <input
-            type="text"
-            name="modelName"
-            value={config.modelName}
-            readOnly={true}
-            className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
-            placeholder="e.g. NovaGPT"
-          />
-        </label>
-        <label>
-          <span className="block mb-1 font-medium">Temperature</span>
-          <input
-            type="number"
-            name="temperature"
-            min={0}
-            max={1}
-            step={0.01}
-            value={config.temperature}
-            onChange={handleChange}
-            className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
-          />
-        </label>
-        <label>
-          <span className="block mb-1 font-medium">Max Tokens</span>
-          <input
-            type="number"
-            name="maxTokens"
-            min={1}
-            max={4096}
-            value={config.maxTokens}
-            onChange={handleChange}
-            className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
-          />
-        </label>
-        <label>
-          <span className="block mb-1 font-medium">System Prompt</span>
-          <textarea
-            name="systemPrompt"
-            value={config.systemPrompt}
-            onChange={handleChange}
-            className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
-            rows={3}
-            placeholder="You are Nova 1000, a helpful assistant..."
-          />
-        </label>
-        <button
-          className="mt-4 px-4 py-2 flex justify-center items-center bg-blue-600 text-white rounded hover:bg-blue-700"
-          onClick={handleSave}
-        >
-          {isSave ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            "Save Config"
-          )}
-        </button>
+      <div className="w-1/3 bg-slate-900 border-r border-slate-800 flex flex-col">
+        {/* Title (fixed) */}
+        <div className="p-6 flex-shrink-0 border-b border-slate-800">
+          <h2 className="text-2xl font-bold">Configure Nova 1000</h2>
+        </div>
+
+        {/* Scrollable form */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
+          <label className="block">
+            <span className="block mb-1 font-medium">Model Name</span>
+            <input
+              type="text"
+              name="modelName"
+              value={config.modelName}
+              readOnly={true}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              placeholder="e.g. NovaGPT"
+            />
+          </label>
+          <label className="block">
+            <span className="block mb-1 font-medium">Description</span>
+            <textarea
+              name="modelDescription"
+              value={config.modelDescription}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              rows={3}
+              placeholder="You are Nova 1000, a helpful assistant..."
+            />
+          </label>
+
+          <label className="block">
+            <span className="block mb-1 font-medium">Temperature</span>
+            <input
+              type="number"
+              name="temperature"
+              min={0}
+              max={1}
+              step={0.01}
+              value={config.temperature}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+            />
+          </label>
+
+          <label className="block">
+            <span className="block mb-1 font-medium">Max Tokens</span>
+            <input
+              type="number"
+              name="maxTokens"
+              min={1}
+              max={4096}
+              value={config.maxTokens}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+            />
+          </label>
+
+          <label className="block">
+            <span className="block mb-1 font-medium">System Prompt</span>
+            <textarea
+              name="systemPrompt"
+              value={config.systemPrompt}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              rows={3}
+              placeholder="You are Nova 1000, a helpful assistant..."
+            />
+          </label>
+        </div>
+
+        {/* Save button (fixed at bottom) */}
+        <div className="p-6 flex-shrink-0 border-t border-slate-800">
+          <button
+            className="w-full px-4 py-2 flex justify-center items-center bg-blue-600 text-white rounded hover:bg-blue-700"
+            onClick={handleSave}
+          >
+            {isSave ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              "Save Config"
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Right: Playground Section */}
-      <div className="w-2/3 flex flex-col bg-[#020617]">
+      <div className="w-2/3 flex flex-col bg-[#020617] h-screen">
+        {/* Header (fixed at top) */}
+        <div className="px-4 py-4 flex flex-col items-center justify-center">
+          <div className="mb-3 sm:mb-4">
+            <CircularWaveform
+              isActive={isListening || isSpeaking || isProcessing}
+              isUserInput={isListening && !isSpeaking}
+              audioLevel={
+                isListening
+                  ? audioLevel
+                  : isSpeaking
+                  ? Math.random() * 0.8 + 0.2
+                  : 0
+              }
+              size={isDesktop ? 165 : 130}
+              className="mx-auto"
+            />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl pl-3 sm:text-3xl md:text-4xl font-light tracking-wider text-white ml-2 sm:ml-0">
+              NOVA 1000
+              <span className="text-xs sm:text-sm align-top ml-1 text-gray-400">
+                ™
+              </span>
+            </h1>
+          </div>
+        </div>
+
+        {/* Messages (scrollable area) */}
         <div
           ref={chatContainerRef}
-          className="flex-1 px-4 py-4 overflow-y-auto scrollbar-hide min-h-0"
+          className="flex-1 overflow-y-auto px-4 py-2 scrollbar-hide"
         >
-          <div className="flex flex-col mb-4 items-center justify-center mobile-safe-top">
-            <div className="mb-3 sm:mb-4">
-              <CircularWaveform
-                isActive={isListening || isSpeaking || isProcessing}
-                isUserInput={isListening && !isSpeaking}
-                audioLevel={
-                  isListening
-                    ? audioLevel
-                    : isSpeaking
-                    ? Math.random() * 0.8 + 0.2
-                    : 0
-                }
-                size={isDesktop ? 165 : 130}
-                className="mx-auto"
+          <div className="flex flex-col space-y-4">
+            {messages.map((message) => (
+              <ChatMessage
+                key={message._id || message.timestamp.toString()}
+                message={message.text}
+                isUser={message.isUser}
+                timestamp={new Date(message.timestamp)}
+                setIsSpeaking={setIsSpeaking}
               />
-            </div>
-            <div className="text-center">
-              <h1 className="text-2xl pl-3 sm:text-3xl md:text-4xl font-light tracking-wider text-white ml-2 sm:ml-0">
-                NOVA 1000
-                <span className="text-xs sm:text-sm align-top ml-1 text-gray-400">
-                  ™
-                </span>
-              </h1>
-            </div>
-          </div>
+            ))}
 
-          {messages.map((message) => (
-            <ChatMessage
-              key={message._id || message.timestamp.toString()}
-              message={message.text}
-              isUser={message.isUser}
-              timestamp={new Date(message.timestamp)}
-              setIsSpeaking={setIsSpeaking}
-            />
-          ))}
-
-          {isProcessing && (
-            <div className="flex justify-end mb-6">
-              <div className="bg-slate-800/80 px-4 py-3 rounded-2xl max-w-xs">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100" />
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200" />
+            {isProcessing && (
+              <div className="flex justify-end mb-6">
+                <div className="bg-slate-800/80 px-4 py-3 rounded-2xl max-w-xs">
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100" />
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200" />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {errorMessage && (
-            <div className="mb-2 text-red-400 text-sm bg-slate-800/70 rounded-lg p-2 text-center">
-              {errorMessage}
-            </div>
-          )}
+            {errorMessage && (
+              <div className="text-red-400 text-sm bg-slate-800/70 rounded-lg p-2 text-center">
+                {errorMessage}
+              </div>
+            )}
 
-          <div ref={messagesEndRef} className="h-4" />
+            <div ref={messagesEndRef} />
+          </div>
         </div>
 
         {/* Input Section */}
@@ -417,7 +381,7 @@ const ModelConfigs = () => {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
-                        handleSendFile(inputValue);
+                        handleSendFilePrompt(inputValue);
                       }
                     }}
                   />
@@ -426,7 +390,7 @@ const ModelConfigs = () => {
                   className={`ml-2 bg-transparent text-gray-400 hover:text-white transition-all duration-200 rounded px-3 py-1 text-xs ${
                     !inputValue.trim() ? "opacity-50 cursor-not-allowed" : ""
                   }`}
-                  onClick={() => handleSendFile(inputValue)}
+                  onClick={() => handleSendFilePrompt(inputValue)}
                   disabled={!inputValue.trim() || isSending}
                 >
                   {isSending ? (
@@ -451,7 +415,7 @@ const ModelConfigs = () => {
             )}
           </div>
 
-          {/* <div className="flex items-center justify-between mb-2 sm:mb-0">
+          <div className="flex items-center justify-between mb-2 sm:mb-0">
             <div className="flex items-center space-x-3">
               <label
                 className="p-2 rounded-xl cursor-pointer text-gray-400 hover:text-white transition-all duration-200"
@@ -532,7 +496,7 @@ const ModelConfigs = () => {
                 <img src={micIcone} className="w-8 h-8" alt="Microphone" />
               </button>
             </div>
-          </div> */}
+          </div>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface IModelConfig extends Document {
   modelName: string;
+  modelDescription: string;
   temperature: number;
   maxTokens: number;
   systemPrompt?: string;
@@ -12,9 +13,13 @@ export interface IModelConfig extends Document {
 const modelConfigSchema = new Schema<IModelConfig>(
   {
     modelName: { type: String, required: true },
+    modelDescription: {
+      type: String,
+      default: "A model designed for general purpose language processing.",
+    },
     temperature: { type: Number, default: 0.7 },
     maxTokens: { type: Number, default: 512 },
-    systemPrompt: { type: String }
+    systemPrompt: { type: String },
   },
   { timestamps: true }
 );

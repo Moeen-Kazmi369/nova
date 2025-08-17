@@ -10,6 +10,7 @@ import {
   uploadMessageWithFile,
   saveVoiceChat,
   appendVoiceChat,
+  uploadPlaygroundMessageWithFile,
 } from "../controllers/chatController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import multer from "multer";
@@ -37,6 +38,12 @@ router.post(
   protect,
   upload.single("file"),
   uploadMessageWithFile
+);
+router.post(
+  "/upload-message",
+  protect,
+  upload.single("file"),
+  uploadPlaygroundMessageWithFile
 );
 router.post("/voice-chat/save", protect, saveVoiceChat);
 router.post("/voice-chat/append", protect, appendVoiceChat);

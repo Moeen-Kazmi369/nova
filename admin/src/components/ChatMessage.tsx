@@ -55,24 +55,25 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 setIsLoading(true);
                 try {
                   const response = await axios.post(
-                    "https://api.openai.com/v1/audio/speech",
+                    `https://api.elevenlabs.io/v1/text-to-speech/${
+                      import.meta.env.VITE_ELEVEN_VOICE_ID
+                    }`,
+                    { text: message },
                     {
-                      model: "tts-1",
-                      voice: "alloy",
-                      input: message,
-                    },
-                    {
-                      responseType: "blob",
                       headers: {
-                        Authorization: `Bearer ${
-                          import.meta.env.VITE_OPENAI_API_KEY
+                        "xi-api-key": `${
+                          import.meta.env.VITE_ELEVEN_LAB_API_KEY
                         }`,
                         "Content-Type": "application/json",
+                        Accept: "audio/mpeg",
                       },
+                      responseType: "arraybuffer",
                     }
                   );
-
-                  const audioUrl = URL.createObjectURL(response.data);
+                  const audioBlob = new Blob([response.data], {
+                    type: "audio/mpeg",
+                  });
+                  const audioUrl = URL.createObjectURL(audioBlob);
                   const audio = new Audio(audioUrl);
                   audioRef.current = audio;
                   setIsPlaying(true);

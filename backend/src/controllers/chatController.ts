@@ -1,8 +1,8 @@
 // import "../utils/pdf-setup";  // MUST be first
-import { Request, Response } from 'express';
+import { Request, Response } from "express";
 
-import Chat from '../models/Chat.js';
-import Message from '../models/Message.js';
+import Chat from "../models/Chat.js";
+import Message from "../models/Message.js";
 import ModelConfig from "../models/modelConfigModel.js";
 import fs from "fs";
 import path from "path";
@@ -249,6 +249,103 @@ export const uploadMessageWithFile = async (req: any, res: any) => {
     res.status(500).json({ error: errorMessage });
   }
 };
+export const uploadPlaygroundMessageWithFile = async (req: any, res: any) => {
+  if (!req.file || !req.body.prompt) {
+    return res.status(400).json({ error: "File and prompt are required" });
+  }
+
+  const filePath = req.file.path;
+  const fileExt = path.extname(req.file.originalname).toLowerCase();
+  let extractedText = "";
+  let messages: any[] = [
+    {
+      role: "system",
+      content:
+        (await ModelConfig.findOne().exec())?.systemPrompt ||
+        "You are a helpful assistant.",
+    },
+    { role: "user", content: [] },
+  ];
+
+  try {
+    // Handle different file types
+    if (fileExt === ".pdf") {
+      const dataBuffer = fs.readFileSync(filePath);
+      const data = await pdfParse(dataBuffer);
+      extractedText = data.text;
+      messages[1].content.push({
+        type: "text",
+        text: `${req.body.prompt}\n\n[File Content]:\n${extractedText}`,
+      });
+    } else if (
+      [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp"].includes(fileExt)
+    ) {
+      // Convert image to base64 for OpenAI vision API
+      const imageBuffer = fs.readFileSync(filePath);
+      const base64Image = imageBuffer.toString("base64");
+      const mimeType = req.file.mimetype;
+
+      // Optional: Extract text with Tesseract for additional context
+      const {
+        data: { text },
+      } = await Tesseract.recognize(filePath, "eng");
+      extractedText = text;
+
+      messages[1].content.push(
+        {
+          type: "text",
+          text: `${req.body.prompt}\n\n[Extracted Text from Image]:\n${extractedText}`,
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:${mimeType};base64,${base64Image}`,
+          },
+        }
+      );
+    } else {
+      extractedText = fs.readFileSync(filePath, "utf-8");
+      messages[1].content.push({
+        type: "text",
+        text: `${req.body.prompt}\n\n[File Content]:\n${extractedText}`,
+      });
+    }
+    const maxTokens = (await ModelConfig.findOne().exec())?.maxTokens || 500;
+    // Call OpenAI API
+    const aiResponse = await openai.chat.completions.create({
+      model: "gpt-4o", // Use vision-capable model
+      max_tokens: maxTokens,
+      messages,
+    });
+
+    const aiText =
+      aiResponse.choices[0]?.message?.content ||
+      "AI did not return a response.";
+
+    // Clean up temporary file
+    fs.unlink(filePath, () => {});
+
+    // Send response
+    res.status(201).json({
+      message: "File and prompt processed successfully",
+      userMessage: messages[1].content[0].text,
+      aiMessage: aiText,
+    });
+  } catch (err: any) {
+    fs.unlink(filePath, () => {});
+    console.error(err);
+    let errorMessage = "Failed to process file and prompt. Please try again.";
+    if (err.code === "ENOSPC") {
+      errorMessage = "Server storage is full. Please try again later.";
+    } else if (err.message.includes("network")) {
+      errorMessage =
+        "Network error. Please check your connection and try again.";
+    } else if (err.message.includes("rate_limit")) {
+      errorMessage = "Rate limit exceeded. Please wait a moment and try again.";
+    }
+    res.status(500).json({ error: errorMessage });
+  }
+};
 export const uploadFileToChat = async (req: any, res: Response) => {
   if (!req.file) {
     return res.status(400).json({ error: "No file uploaded" });
@@ -298,8 +395,6 @@ export const uploadFileToChat = async (req: any, res: Response) => {
     res.status(500).json({ error: err.message || "Failed to process file" });
   }
 };
-
-
 
 export const saveVoiceChat = async (req: Request, res: Response) => {
   const { userId, transcripts } = req.body;
@@ -366,7 +461,6 @@ export const saveVoiceChat = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to save voice chat" });
   }
 };
-
 
 export const appendVoiceChat = async (req: Request, res: Response) => {
   const { chatId, transcripts } = req.body;

@@ -137,7 +137,7 @@ export const useChats = () => {
     const modelConfigs = await axios.post(
       `${import.meta.env.VITE_BACKEND_API_URI}/api/model-configs/admin-get`
     );
-    const modelConfig = modelConfigs?.configs[0];
+    const modelConfig = modelConfigs?.data?.configs[0] || null;
     const systemPrompt =
       modelConfig?.systemPrompt || "You are a helpful assistant.";
     const updatedMessages = [
@@ -232,6 +232,7 @@ export const useChats = () => {
         aiResponse = await getGPTResponse(openAIMessages);
         console.log(aiResponse);
       } catch (err) {
+        console.log(err);
         aiResponse = "I'm having trouble processing your request right now.";
       }
       // 4. Add AI response to backend
