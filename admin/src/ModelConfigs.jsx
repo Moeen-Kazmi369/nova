@@ -337,8 +337,23 @@ const ModelConfigs = () => {
         </div>
 
         {/* Input Section */}
-        <div className="flex-shrink-0 px-2 pb-4 sm:pb-4">
-          <div className="mb-2 flex flex-col space-y-2">
+        <div className="flex-shrink-0 flex px-2 pb-4 sm:pb-4">
+          <div className="flex items-center mb-2 space-x-3">
+            <label
+              className="p-2 rounded-xl cursor-pointer text-gray-400 hover:text-white transition-all duration-200"
+              title="Upload file"
+            >
+              <input
+                type="file"
+                accept="*"
+                style={{ display: "none" }}
+                onChange={handleFileSelect}
+                disabled={isProcessing}
+              />
+              <Plus className="w-5 h-5" />
+            </label>
+          </div>
+          <div className="mb-2 flex flex-col flex-1 space-y-2">
             {selectedFile && (
               <div className="flex items-center space-x-3 bg-slate-800/70 rounded-xl p-2 mb-2">
                 <div className="relative w-20 h-20">
@@ -415,29 +430,7 @@ const ModelConfigs = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-between mb-2 sm:mb-0">
-            <div className="flex items-center space-x-3">
-              <label
-                className="p-2 rounded-xl cursor-pointer text-gray-400 hover:text-white transition-all duration-200"
-                title="Upload file"
-              >
-                <input
-                  type="file"
-                  accept="*"
-                  style={{ display: "none" }}
-                  onChange={handleFileSelect}
-                  disabled={isProcessing}
-                />
-                <Plus className="w-5 h-5" />
-              </label>
-              <button
-                onClick={() => console.log("Menu opened")}
-                className="p-2 text-gray-400 hover:text-white transition-colors"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            </div>
-
+          <div className="flex items-center justify-center mb-2 sm:mb-0">
             <div
               className="flex-shrink-0 text-center pb-2"
               style={{ minHeight: "20px" }}
@@ -472,29 +465,6 @@ const ModelConfigs = () => {
                   </div>
                 </div>
               )}
-            </div>
-
-            <div className="flex items-center space-x-3 relative pl-2">
-              {!isDesktop && isIOS && permissionStatus === "denied" && (
-                <div className="absolute bottom-full right-0 mb-2 text-center text-red-400 text-xs bg-slate-800/90 px-3 py-2 rounded-lg whitespace-nowrap">
-                  🎤 Microphone blocked.{" "}
-                  <a
-                    href="/mic-access"
-                    className="underline text-blue-300 hover:text-blue-400"
-                  >
-                    Tap here to enable
-                  </a>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => console.log("Voice mode")}
-                className={`rounded-full transition-all duration-300 text-gray-400 hover:text-white bg-slate-800/60 hover:bg-slate-700/60`}
-                title="Start voice input"
-              >
-                <span className="sr-only">Start voice input</span>
-                <img src={micIcone} className="w-8 h-8" alt="Microphone" />
-              </button>
             </div>
           </div>
         </div>
