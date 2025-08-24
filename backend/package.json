@@ -1,49 +1,31 @@
 {
-  "name": "nova-backend",
+  "name": "nova-ai-backend",
   "version": "1.0.0",
-  "main": "server.ts",
-  "type": "module",
+  "description": "Backend for Nova AI app with admin/user roles and RAG setup",
+  "main": "server.js",
   "scripts": {
-    "dev": "nodemon --watch src --ext ts --exec tsx src/server.ts",
-    "start": "tsx ./src/server.ts",
-    "build": "tsc"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "@types/multer": "^2.0.0",
-    "bcryptjs": "^3.0.2",
-    "canvas": "^3.1.2",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "dotenv": "^17.1.0",
-    "express": "^5.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.16.2",
-    "multer": "^2.0.2",
-    "nodemailer": "^7.0.5",
-    "openai": "^5.10.2",
-    "pdf-lib": "^1.17.1",
-    "pdf-parse": "^1.1.1",
-    "pdf2pic": "^3.2.0",
-    "pdfjs-dist": "^3.11.174",
-    "sharp": "^0.34.3",
-    "tesseract.js": "^4.1.4",
-    "ws": "^8.18.3"
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "express-validator": "^6.14.3",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^7.0.3",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.3",
+    "openai": "^4.6.0",
+    "socket.io": "^4.6.1",
+    "supabase": "^2.2.0",
+    "morgan": "^1.10.0"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^24.0.12",
-    "@types/nodemailer": "^6.4.17",
-    "@types/pdf-parse": "^1.1.5",
-    "@vercel/node": "^5.3.4",
-    "nodemon": "^3.1.10",
-    "ts-node": "^10.9.2",
-    "tsx": "^4.20.3",
-    "typescript": "^5.9.2"
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
