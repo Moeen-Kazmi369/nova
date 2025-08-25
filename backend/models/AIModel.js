@@ -1,5 +1,12 @@
 const mongoose = require("mongoose");
 
+const fileSchema = new mongoose.Schema({
+  filename: String,
+  mimetype: String,
+  size: Number,
+  textContent: String, // extracted plain text from the file
+});
+
 const aiModelSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
@@ -8,14 +15,10 @@ const aiModelSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  ragTableName: String, // Supabase vector DB table storing embeddings
-  vectorDimension: Number,
-  apiConfig: Object, // OpenAI or other AI API configs
-  status: {
-    type: String,
-    enum: ["active", "inactive"],
-    default: "active",
-  },
+  apiConfig: Object,
+  files: [fileSchema], // up to 3 text files with extracted text content
+  fullTextContent: String, // concatenated text from all files (optional)
+  status: { type: String, enum: ["active", "inactive"], default: "active" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: Date,
 });

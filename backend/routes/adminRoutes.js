@@ -11,11 +11,11 @@ router.delete("/users/:userId", adminController.deleteUser);
 
 // AI Model CRUD
 router.post("/models", adminController.createAIModel);
-router.get("/models", adminController.getAllAIModels);
+router.get("/modelsForAdmin", adminController.getAllAIModelsForAdmin);
 router.put("/models/:id", adminController.updateAIModel);
 router.delete("/models/:id", adminController.deleteAIModel);
 
 // Admin playground (dynamic AI chat)
-router.post("/playground", adminController.adminPlayground);
+router.post("/playground/text-chat", adminController.adminPlaygroundTextChat);
 
 module.exports = router;
