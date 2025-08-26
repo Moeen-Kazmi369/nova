@@ -12,11 +12,12 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const redirect = new URLSearchParams(location.search).get("redirect") || "/";
+  const emailQuery = new URLSearchParams(location.search).get("email") || "/";
   React.useEffect(() => {
-    if (location.state?.email) {
-      setEmail(location.state.email);
+    if (emailQuery) {
+      setEmail(emailQuery);
     }
-  }, [location.state]);
+  }, [emailQuery]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

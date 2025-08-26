@@ -10,7 +10,7 @@ const ProtectRoutes = () => {
     // Not logged in → redirect to login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-  if (user?.user?.role !== "admin") {
+  if (user?.role !== "admin") {
     // Logged in but not admin → access denied
     return <Navigate to="/access-denied" replace />;
   }

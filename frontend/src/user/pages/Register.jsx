@@ -19,18 +19,28 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const { data } = await axios.post(`${import.meta.env.VITE_BACKEND_API_URI}/api/auth/register`, {
-        name,
-        email,
-        password,
-      });
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_BACKEND_API_URI}/api/auth/register`,
+        {
+          name,
+          email,
+          password,
+        }
+      );
+      // Navigate to verify-otp with email and redirect as query parameters
+      navigate(
+        `/verify-otp?email=${encodeURIComponent(
+          email
+        )}&redirect=${encodeURIComponent(redirect)}`
+      );
 
-      localStorage.setItem("user", JSON.stringify(data));
-      localStorage.setItem("autoCreateChat", "true");
-      navigate(redirect);
       toast.success("Registration successful");
     } catch (error) {
-      toast.error(error.response?.data?.error || "Registration failed");
+      toast.error(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Registration failed"
+      );
     } finally {
       setLoading(false);
     }

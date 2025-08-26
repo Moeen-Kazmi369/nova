@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 
 const HomePage = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -22,7 +23,18 @@ const HomePage = () => {
     };
 
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen relative">
+        <button
+          className="m-4 absolute right-0 top-0 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm"
+          onClick={() => {
+            localStorage.removeItem("user");
+            localStorage.removeItem("autoCreateChat");
+            window.location.href = "/";
+          }}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Logout
+        </button>
         <h1 className="text-4xl font-bold mb-4 text-white">Welcome, Admin!</h1>
         <p className="text-lg text-blue-200 mb-8">
           Manage your Nova 1000 settings and invite users below.
