@@ -21,7 +21,8 @@ apiClient.interceptors.request.use((config) => {
 /** Admin: Get list of all users */
 export const getUsers = async () => {
   const { data } = await apiClient.get("/users");
-  return data;
+  const currentUser=JSON.parse(localStorage.getItem("user"));
+  return data?.filter(user=>user._id!==currentUser.userId);
 };
 
 export function useGetUsers() {
