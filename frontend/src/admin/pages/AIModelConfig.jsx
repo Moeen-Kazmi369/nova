@@ -120,7 +120,7 @@ const AIModelConfig = () => {
         toast.success("Model created successfully");
         // After create, perhaps redirect to edit page with new id, but assuming handled outside
       }
-      navigate("/admin/dashboard");
+      navigate("/admin");
     } catch (err) {
       toast.error(err.message || "Failed to save Model");
     } finally {
@@ -215,7 +215,7 @@ const AIModelConfig = () => {
       <div className="w-1/3 bg-slate-900 border-r border-slate-800 flex flex-col">
         {/* Title (fixed) */}
         <div className="p-6 flex gap-2 items-center flex-shrink-0 border-b border-slate-800">
-          <ArrowLeft onClick={()=>navigate("/admin/dashboard")} className="text-white mt-1 cursor-pointer"/>
+          <ArrowLeft onClick={()=>navigate("/admin")} className="text-white mt-1 cursor-pointer"/>
           {id === "new" ? (
           <h2 className="text-2xl font-bold">Create Nova 1000 AI Model</h2>
           ):(

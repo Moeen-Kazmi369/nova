@@ -48,7 +48,7 @@ const HomePage = () => {
           </button>
           <button
             className="px-6 py-2 bg-gray-800 text-white rounded shadow hover:bg-gray-900"
-            onClick={() => navigate("/admin/dashboard")}
+            onClick={() => navigate("/admin")}
           >
             Go to Dashboard
           </button>

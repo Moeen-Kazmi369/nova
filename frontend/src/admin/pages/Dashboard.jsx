@@ -1,10 +1,15 @@
-
 import React, { useState } from "react";
-import { Trash2, Plus, User, Layers } from "lucide-react";
+import { Trash2, Plus, User, Layers, LogOut } from "lucide-react";
 import { Dialog } from "@headlessui/react";
+import Icon from "../../assets/Icon.png";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useGetUsers, useDeleteUser, useGetAllAIModelsForAdmin, useDeleteAIModel } from "../hooks/backendAPIService";
+import {
+  useGetUsers,
+  useDeleteUser,
+  useGetAllAIModelsForAdmin,
+  useDeleteAIModel,
+} from "../hooks/backendAPIService";
 import axios from "axios";
 
 export default function Dashboard() {
@@ -33,14 +38,12 @@ export default function Dashboard() {
   const deleteAIModel = useDeleteAIModel();
 
   // Generate invite link
-    const handleGenerateLink = () => {
-      // Simulate invite link generation
-      setInviteLink(
-        `${window.location.origin}?email=${encodeURIComponent(
-          email
-        )}`
-      );
-    };
+  const handleGenerateLink = () => {
+    // Simulate invite link generation
+    setInviteLink(
+      `${window.location.origin}?email=${encodeURIComponent(email)}`
+    );
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(inviteLink);
@@ -101,10 +104,12 @@ export default function Dashboard() {
       {/* Sidebar */}
       <aside className="w-64 flex flex-col bg-gray-900 p-6">
         <div className="flex items-center mb-12 space-x-2">
-          <Layers className="h-8 w-8 text-blue-400" />
+          {/* <Layers className="h-8 w-8 text-blue-400" /> */}
+                      <img src={Icon} alt="logo" className="w-8 " />
+
           <h1 className="text-2xl font-bold">NOVA 1000</h1>
         </div>
-        <nav className="flex flex-col space-y-4">
+        <nav className="flex flex-1 flex-col space-y-4">
           <button
             onClick={() => setSelectedNav("users")}
             className={`flex items-center space-x-3 px-3 py-2 rounded-lg ${
@@ -124,6 +129,17 @@ export default function Dashboard() {
             <span>NOVA 1000 Models</span>
           </button>
         </nav>
+        <button
+          className="flex items-center justify-center bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm"
+          onClick={() => {
+            localStorage.removeItem("user");
+            localStorage.removeItem("autoCreateChat");
+            window.location.href = "/";
+          }}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Logout
+        </button>
       </aside>
 
       {/* Main content */}
@@ -135,7 +151,7 @@ export default function Dashboard() {
           </h2>
           {selectedNav === "models" ? (
             <button
-              onClick={() => navigate("/admin/dashboard/ai-model-config/new")}
+              onClick={() => navigate("/admin/ai-model-config/new")}
               className="flex items-center space-x-2 rounded bg-blue-600 px-4 py-2 hover:bg-blue-700"
             >
               <Plus className="h-5 w-5" />
@@ -203,7 +219,7 @@ export default function Dashboard() {
                     <div
                       onClick={() =>
                         navigate(
-                          `/admin/dashboard/ai-model-config/${model._id}`
+                          `/admin/ai-model-config/${model._id}`
                         )
                       }
                     >

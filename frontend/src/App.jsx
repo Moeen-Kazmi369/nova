@@ -46,9 +46,11 @@ export default function App() {
 
         {/* Admin Routes */}
         <Route element={<AdminProtectRoutes />}>
-          <Route path="/admin" element={<AdminHomePage />} />
-          <Route path="/admin/dashboard" element={<Dashboard />} />
-          <Route path="/admin/dashboard/ai-model-config/:id" element={<AIModelConfig />} />
+          <Route path="/admin" element={<Dashboard />} />
+          <Route
+            path="/admin/ai-model-config/:id"
+            element={<AIModelConfig />}
+          />
         </Route>
       </Routes>
     </Router>
