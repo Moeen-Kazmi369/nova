@@ -48,9 +48,9 @@ const HomePage = () => {
           </button>
           <button
             className="px-6 py-2 bg-gray-800 text-white rounded shadow hover:bg-gray-900"
-            onClick={() => navigate("/model-configs")}
+            onClick={() => navigate("/admin/dashboard")}
           >
-            Nova 1000 Settings
+            Go to Dashboard
           </button>
         </div>
 

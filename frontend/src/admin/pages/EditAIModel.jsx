@@ -16,7 +16,7 @@ const initialConfig = {
   systemPrompt: "",
 };
 
-const ModelConfigs = () => {
+const EditAIModal = () => {
   const [config, setConfig] = useState(initialConfig);
 
   // Playground state
@@ -63,7 +63,7 @@ const ModelConfigs = () => {
           setConfig(data.configs[0]);
         }
       } catch (err) {
-        toast.error(err.response?.data?.error || "Failed to load ModelConfigs");
+        toast.error(err.response?.data?.error || "Failed to load EditAIModal");
       }
     };
 
@@ -469,4 +469,4 @@ const ModelConfigs = () => {
   );
 };
 
-export default ModelConfigs;
+export default EditAIModal;

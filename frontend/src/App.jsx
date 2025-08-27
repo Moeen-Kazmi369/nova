@@ -16,17 +16,17 @@ import AccessDenied from "./user/pages/AccessDenied";
 
 // Admin imports
 import AdminHomePage from "./admin/pages/HomePage";
-import ModelConfigs from "./admin/pages/ModelConfigs";
 import AdminProtectRoutes from "./admin/components/ProtectRoutes";
 import AboutPage from "./user/pages/AboutPage";
 import VerifyOTP from "./user/pages/VerifyOTP";
+import Dashboard from "./admin/pages/Dashboard";
+import AIModelConfig from "./admin/pages/AIModelConfig";
 
 export default function App() {
   return (
     <Router>
       <Toaster position="top-right" />
       <Routes>
-
         {/* Auth Routes */}
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
@@ -47,7 +47,8 @@ export default function App() {
         {/* Admin Routes */}
         <Route element={<AdminProtectRoutes />}>
           <Route path="/admin" element={<AdminHomePage />} />
-          <Route path="/admin/model-configs" element={<ModelConfigs />} />
+          <Route path="/admin/dashboard" element={<Dashboard />} />
+          <Route path="/admin/dashboard/ai-model-config/:id" element={<AIModelConfig />} />
         </Route>
       </Routes>
     </Router>

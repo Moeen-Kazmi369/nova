@@ -4,8 +4,9 @@ const multer = require("multer");
 const { parsePDF, parseTxtCsvJson } = require("../utils/fileParsers");
 const { chunkText } = require("../utils/textChunker");
 const { getImageDescription } = require("../utils/imageDescription.js"); // similar to admin
-const supabase=require("../config/supabase")
-const openaiClient=require("../config/openai")
+const supabase = require("../config/supabase");
+const openaiClient = require("../config/openai");
+const openai = require("openai");
 // Setup multer for file uploads - max 3 files
 const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max file size each
@@ -71,16 +72,21 @@ exports.createAIModel = async (req, res) => {
             model: "text-embedding-3-large", // replace with your embedding model
             input: chunk,
           });
-          const [embedding] = embeddingResponse.data[0].embedding;
+          const embedding = embeddingResponse.data[0].embedding;
 
-          // Save chunk + embedding to Supabase vector table:
-          await supabase
-            .from("documents") // your vector DB table name
-            .insert({
-              content: chunk,
-              embedding,
-              metadata: { aiModelId: newModel._id.toString(), filename: "" },
-            });
+          try {
+            // Save chunk + embedding to Supabase vector table:
+            const res = await supabase
+              .from("documents") // your vector DB table name
+              .insert({
+                content: chunk,
+                embedding,
+                metadata: { aiModelId: newModel._id.toString(), filename: "" },
+              });
+            console.log(res);
+          } catch (error) {
+            console.log(error);
+          }
         }
       }
 
@@ -307,18 +313,17 @@ exports.adminPlaygroundTextChat = async (req, res) => {
 
       // If ragContext exists, perform semantic search in Supabase vector DB to get relevant text chunks
       let relatedChunks = [];
-      if (model.files.length>0 && model.fullTextContent) {
+      if (model.files.length > 0 && model.fullTextContent) {
         const embeddingResponse = await openaiClient.embeddings.create({
           model: "text-embedding-3-large",
           input: prompt,
         });
         const queryEmbedding = embeddingResponse.data[0].embedding;
 
-        let { data, error } = await supabase
-          .from("documents")
-          .select("content")
-          .order("embedding <-> ?", true, { params: [queryEmbedding] })
-          .limit(5);
+        const { data, error } = await supabase.rpc("match_documents", {
+          query_embedding: queryEmbedding,
+          match_count: 5,
+        });
 
         if (error) {
           console.error("Supabase RAG query error:", error);
@@ -373,4 +378,3 @@ exports.adminPlaygroundTextChat = async (req, res) => {
     }
   });
 };
-
