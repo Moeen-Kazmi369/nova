@@ -6,12 +6,8 @@ const { getImageDescription } = require("../utils/imageDescription.js"); // simi
 const { chunkText } = require("../utils/textChunker");
 const supabase = require("../config/supabase");
 const openaiClient = require("../config/openai");
+const openai = require("openai");
 const mongoose = require("mongoose");
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -60,10 +56,9 @@ async function generateConversationName(openaiClient, messageText) {
 exports.userTextPrompt = async (req, res) => {
   upload(req, res, async (uploadErr) => {
     if (uploadErr) return res.status(400).json({ message: uploadErr.message });
-
+    const userId = req.user.id;
     try {
-      const { userId } = req.user;
-      const { conversationId, prompt, aiModelId } = req.body;
+      const {conversationId, prompt,chatType, aiModelId } = req.body;
 
       if (!prompt || !aiModelId) {
         return res
@@ -152,9 +147,7 @@ exports.userTextPrompt = async (req, res) => {
           content: `Additional document input:\n${ragContext}`,
         });
       }
-
-      messages.push({ role: "user", content: prompt });
-
+        messages.push({ role: "user", content: prompt });
       // Generate AI response
       const completion = await openaiClient.chat.completions.create({
         model: model.apiConfig?.chatModel || "gpt-4o-mini",
@@ -170,10 +163,11 @@ exports.userTextPrompt = async (req, res) => {
       let conversation;
 
       if (!conversationId) {
+        const promptValue = chatType === "new" ? aiReply : prompt;
         // Generate conversation name from first user message
         const conversationName = await generateConversationName(
           openaiClient,
-          prompt
+          promptValue,
         );
 
         conversation = new Conversation({
@@ -181,17 +175,25 @@ exports.userTextPrompt = async (req, res) => {
           aiModelId,
           conversationName,
           messages: [
+            ...(chatType !== "new"
+              ? [
+                  {
+                    sender: "user",
+                    text: prompt,
+                    attachments:
+                      req.files?.map((f) => ({
+                        filename: f.originalname,
+                        mimetype: f.mimetype,
+                        size: f.size,
+                      })) || [],
+                  },
+                ]
+              : []),
             {
-              sender: "user",
-              text: prompt,
-              attachments:
-                req.files?.map((f) => ({
-                  filename: f.originalname,
-                  mimetype: f.mimetype,
-                  size: f.size,
-                })) || [],
+              sender: "ai",
+              text: aiReply,
+              attachments: [],
             },
-            { sender: "ai", text: aiReply, attachments: [] },
           ],
         });
       } else {
@@ -242,7 +244,7 @@ exports.getUserConversations = async (req, res) => {
     const userId = req.user.id;
 
     const conversations = await Conversation.find({
-      userId: mongoose.Types.ObjectId(userId),
+      userId: new mongoose.Types.ObjectId(userId),
     })
       .select("conversationName aiModelId updatedAt")
       .sort({ updatedAt: -1 }); // latest updated first

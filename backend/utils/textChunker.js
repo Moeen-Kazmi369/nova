@@ -1,16 +1,23 @@
-// Simple splitter to chunk text into ~1000 character chunks with overlap
+// Improved text splitter: chunk by sentences/paragraphs with overlap
 function chunkText(text, maxChunkSize = 1000, overlap = 200) {
   const chunks = [];
-  let start = 0;
-  while (start < text.length) {
-    let end = start + maxChunkSize;
-    if (end > text.length) end = text.length;
+  const sentences = text.split(/(?<=[.?!])\s+/); // split on sentence boundaries
+  let currentChunk = "";
 
-    const chunk = text.substring(start, end);
-    chunks.push(chunk);
-
-    start += maxChunkSize - overlap;
+  for (const sentence of sentences) {
+    if ((currentChunk + sentence).length > maxChunkSize) {
+      chunks.push(currentChunk.trim());
+      // Add overlap (last X chars of previous chunk)
+      currentChunk = currentChunk.slice(-overlap) + " " + sentence;
+    } else {
+      currentChunk += " " + sentence;
+    }
   }
+
+  if (currentChunk.trim().length > 0) {
+    chunks.push(currentChunk.trim());
+  }
+
   return chunks;
 }
 

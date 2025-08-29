@@ -54,7 +54,11 @@ const AIModelConfig = () => {
   const createAIModel = useCreateAIModel();
   const updateAIModel = useUpdateAIModel();
   const adminPlaygroundTextChat = useAdminPlaygroundTextChat();
-
+useEffect(() => {
+  if (messagesEndRef.current) {
+    messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }
+}, [messages, isProcessing]);
   useEffect(() => {
     if (models && id && id !=="new") {
       const model = models.find((m) => m._id === id);
@@ -101,7 +105,7 @@ const AIModelConfig = () => {
   const removeModelFile = (index) => {
     setModelFiles((prev) => prev.filter((_, i) => i !== index));
   };
-
+console.log(messages);
   const handleSave = async () => {
     setIsSaving(true);    
     try {
@@ -109,7 +113,9 @@ const AIModelConfig = () => {
       modelData.append("name", config.name);
       modelData.append("description", config.description);
       modelData.append("apiConfig", JSON.stringify(config.apiConfig));
+      console.log(modelFiles);
       modelFiles.forEach((file) => {
+        if (file?.textContent) return;
         modelData.append("files", file);
       });
       if (id && id !== "new" ) {
@@ -214,7 +220,7 @@ const AIModelConfig = () => {
       {/* Left: Config Section */}
       <div className="w-1/3 bg-slate-900 border-r border-slate-800 flex flex-col">
         {/* Title (fixed) */}
-        <div className="p-6 flex gap-2 items-center flex-shrink-0 border-b border-slate-800">
+        <div className="p-6 flex flex-col gap-2 flex-shrink-0 border-b border-slate-800">
           <ArrowLeft onClick={()=>navigate("/admin")} className="text-white mt-1 cursor-pointer"/>
           {id === "new" ? (
           <h2 className="text-2xl font-bold">Create Nova 1000 AI Model</h2>

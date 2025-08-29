@@ -1,18 +1,23 @@
 import React from "react";
 import { useState, useRef } from "react";
 import axios from "axios";
-import { Volume2, VolumeX } from "lucide-react"; // Speaker icons
+import { FileIcon, FileText, ImageIcon, Volume2, VolumeX } from "lucide-react"; // Speaker icons
 
 export const ChatMessage = ({
   message,
   isUser,
   timestamp,
+  attachments,
   setIsSpeaking,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
+  const getFileIcon = (mimetype) => {
+    if (mimetype.startsWith("image/")) return <ImageIcon className="w-5 h-5" />;
+    if (mimetype === "application/pdf") return <FileText className="w-5 h-5" />;
+    return <FileIcon className="w-5 h-5" />;
+  };
   return (
     <div className={`flex ${isUser ? "justify-start" : "justify-end"} mb-6`}>
       <div
@@ -26,6 +31,19 @@ export const ChatMessage = ({
             : "bg-slate-800/80 text-white border-slate-700/50"
         }`}
       >
+        {attachments?.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2 space-y-2">
+            {attachments?.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center w-max max-w-full space-x-2 bg-slate-800 p-2 rounded"
+              >
+                {getFileIcon(file.mimetype || file.type)}
+                <span className="text-sm">{file.filename || file.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
         <p className="text-sm leading-relaxed break-words text-white">
           {message}
         </p>

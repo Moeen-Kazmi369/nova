@@ -14,7 +14,7 @@ export const MenuOverlay= ({
   onClose,
 }) => {
   const navigate = useNavigate();
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef(null);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
