@@ -301,3 +301,141 @@ exports.deleteConversationById = async (req, res) => {
       .json({ message: "Failed to delete conversation", error: error.message });
   }
 };
+
+// New controller for ElevenLabs Custom LLM integration (OpenAI-compatible format)
+exports.elevenLabsLLM = async (req, res) => {
+  try {
+    // Extract OpenAI-compatible fields
+    const { model: aiModelId, messages, stream = false } = req.body;
+    
+    if (!aiModelId || !messages || !Array.isArray(messages)) {
+      return res.status(400).json({ 
+        error: { 
+          message: "model and messages are required", 
+          type: "invalid_request_error" 
+        } 
+      });
+    }
+
+    // Get the last user message for processing
+    const lastUserMessage = messages.findLast(m => m.role === 'user');
+    if (!lastUserMessage) {
+      return res.status(400).json({ 
+        error: { 
+          message: "No user message found in messages array", 
+          type: "invalid_request_error" 
+        } 
+      });
+    }
+
+    const prompt = lastUserMessage.content;
+    
+    // Fetch AI Model and prepare OpenAI client
+    const model = await AIModel.findById(aiModelId);
+    if (!model || model.status !== "active") {
+      return res.status(400).json({ 
+        error: { 
+          message: "Invalid or inactive AI Model", 
+          type: "invalid_request_error" 
+        } 
+      });
+    }
+
+    const openaiApiKey = model.apiConfig?.apiKey || process.env.OPENAI_API_KEY;
+    const openaiClient = new openai.OpenAI({ apiKey: openaiApiKey });
+
+    // Process RAG context from AI Model stored fullTextContent
+    let ragContext = "";
+    if (model.fullTextContent) {
+      ragContext += "\n" + model.fullTextContent;
+    }
+
+    // Semantic search in Supabase vector DB using prompt
+    let relatedChunks = [];
+    if (ragContext.trim() && model.ragTableName) {
+      const embeddingResponse = await openaiClient.embeddings.create({
+        model: "text-embedding-3-large",
+        input: prompt,
+      });
+      const queryEmbedding = embeddingResponse.data[0].embedding;
+
+      let { data, error } = await supabase
+        .from("documents")
+        .select("content")
+        .order("embedding <-> ?", true, { params: [queryEmbedding] })
+        .limit(5);
+
+      if (error) console.error("Supabase RAG query error:", error);
+      else relatedChunks = data.map((item) => item.content);
+    }
+
+    // Prepare messages for OpenAI chat with RAG context
+    const systemPrompt = model.apiConfig?.systemPrompt || "You are a helpful assistant.";
+    
+    // Build context-aware messages array
+    let contextAwareMessages = [
+      { role: "system", content: systemPrompt }
+    ];
+
+    // Add RAG context if available
+    if (relatedChunks.length > 0) {
+      contextAwareMessages.push({
+        role: "system",
+        content: `Relevant context from documents:\n${relatedChunks.join("\n\n")}`,
+      });
+    }
+
+    if (ragContext.trim()) {
+      contextAwareMessages.push({
+        role: "system",
+        content: `Additional document input:\n${ragContext}`,
+      });
+    }
+
+    // Add conversation history (excluding system messages we just added)
+    const userMessages = messages.filter(m => m.role === 'user' || m.role === 'assistant');
+    contextAwareMessages = [...contextAwareMessages, ...userMessages];
+
+    // Generate AI response
+    const completion = await openaiClient.chat.completions.create({
+      model: model.apiConfig?.chatModel || "gpt-4o-mini",
+      messages: contextAwareMessages,
+      max_tokens: model.apiConfig?.maxTokens || 1000,
+      temperature: model.apiConfig?.temperature || 0.7,
+      stream: false // ElevenLabs doesn't support streaming in this context
+    });
+
+    const aiReply = completion.choices[0].message?.content || "No response generated";
+
+    // Return OpenAI-compatible response
+    res.json({
+      id: `chatcmpl-${Date.now()}`,
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: aiModelId,
+      choices: [{
+        index: 0,
+        message: {
+          role: "assistant",
+          content: aiReply,
+        },
+        finish_reason: "stop"
+      }],
+      usage: {
+        prompt_tokens: prompt.length,
+        completion_tokens: aiReply.length,
+        total_tokens: prompt.length + aiReply.length
+      }
+    });
+
+  } catch (error) {
+    console.error("elevenLabsLLM error:", error);
+    res.status(500).json({ 
+      error: { 
+        message: "Failed to process request", 
+        type: "server_error",
+        details: error.message 
+      } 
+    });
+  }
+};
