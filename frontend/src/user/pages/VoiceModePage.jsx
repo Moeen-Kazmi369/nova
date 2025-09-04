@@ -1,17 +1,22 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useConversation } from "@elevenlabs/react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Menu } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Menu } from "lucide-react";
 import { CircularWaveform } from "../components/CircularWaveform";
 import { MenuOverlay } from "../components/MenuOverlay";
 
 const VoiceModePage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   const [transcripts, setTranscripts] = useState([]);
   const transcriptsRef = useRef([]);
+
+  // Get aiModelId and conversationId from URL query parameters
+  const aiModelId = searchParams.get("aiModelId");
+  const conversationId = searchParams.get("conversationId");
 
   const conversation = useConversation({
     onConnect: () => console.log("Connected"),
@@ -33,11 +38,14 @@ const VoiceModePage = () => {
       await conversation.startSession({
         agentId: import.meta.env.VITE_ELEVEN_LAB_AGENT_ID,
         connectionType: "webrtc",
+        // Pass AI model ID and conversation ID as custom parameters
+        ...(aiModelId && { model: aiModelId }),
+        ...(conversationId && { conversationId: conversationId }),
       });
     } catch (error) {
       console.error("Failed to start conversation:", error);
     }
-  }, [conversation]);
+  }, [conversation, aiModelId, conversationId]);
 
   useEffect(() => {
     startConversation();
@@ -48,9 +56,11 @@ const VoiceModePage = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [startConversation]);
+
   useEffect(() => {
     transcriptsRef.current = transcripts;
   }, [transcripts]);
+
   useEffect(() => {
     let timeout;
 
@@ -70,13 +80,11 @@ const VoiceModePage = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     return user.token;
   };
-  console.log(transcripts);
+
   const handleSaveSession = async () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = user?.user?._id;
     const latestTranscripts = transcriptsRef.current;
-    console.log(userId);
-    console.log(latestTranscripts);
     if (!userId || latestTranscripts.length <= 0) {
       return console.warn("No user or transcripts to save");
     }
@@ -104,10 +112,8 @@ const VoiceModePage = () => {
 
       console.log("Saved chat:", data.chat);
       window.location.reload();
-      // alert("Voice session saved successfully!");
     } catch (error) {
       console.error("Save session error:", error);
-      // alert("Failed to save voice session");
     }
   };
 

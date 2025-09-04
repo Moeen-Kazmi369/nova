@@ -307,7 +307,7 @@ exports.elevenLabsLLM = async (req, res) => {
   try {
     // Extract OpenAI-compatible fields
     const { model: aiModelId, messages, stream = false } = req.body;
-    
+     console.log(req.body);
     if (!aiModelId || !messages || !Array.isArray(messages)) {
       return res.status(400).json({ 
         error: { 

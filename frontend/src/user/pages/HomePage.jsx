@@ -24,6 +24,7 @@ import {
   useUserTextPrompt,
 } from "../hooks/backendAPIService";
 import micIcone from "../../assets/micIcone.png";
+import { useNavigate } from "react-router-dom";
 function HomePage() {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -47,6 +48,7 @@ function HomePage() {
   const [permissionStatus, setPermissionStatus] = useState("granted");
   const [chatMessages, setChatMessages] = useState([]);
   const messagesEndRef = useRef(null);
+  const navigate=useNavigate()
 
   // Fetch data using hooks
   const {
@@ -522,6 +524,7 @@ useEffect(() => {
                     <button
                       type="button"
                       className=""
+                      onClick={()=>navigate(`/voice?aiModelId=${selectedModelId}&conversationId=${selectedChatId}`)}
                       title="Start voice input"
                     >
                       <span className="sr-only">Start voice input</span>
