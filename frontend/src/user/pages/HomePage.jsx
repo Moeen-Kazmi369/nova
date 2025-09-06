@@ -29,7 +29,7 @@ function HomePage() {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedChatId, setSelectedChatId] = useState(null);
-  const [selectedModelId, setSelectedModelId] = useState(null);
+  const [selectedModel, setSelectedModel] = useState(null);
   const [inputValue, setInputValue] = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -92,8 +92,8 @@ function HomePage() {
 
   // Set default model on load
   useEffect(() => {
-    if (models && models.length > 0 && !selectedModelId) {
-      setSelectedModelId(models[0]._id);
+    if (models && models.length > 0 && !selectedModel) {
+      setSelectedModel(models[0]);
     }
   }, [models]);
 
@@ -119,13 +119,15 @@ useEffect(() => {
   };
 
   const handleSelectModel = (modelId) => {
-    setSelectedModelId(modelId);
+    if (!models) return;
+    const model = models.find((m) => m._id === modelId);
+    setSelectedModel(model);
     setSelectedChatId(null); // Clear chat selection when switching models
     if (!isDesktop) setIsSidebarOpen(false);
   };
 
   const handleCreateChat = async () => {
-    if (!selectedModelId) {
+    if (!selectedModel) {
       toast.error("Please select a model first");
       return;
     }
@@ -136,7 +138,7 @@ useEffect(() => {
         "prompt",
         "AI You need to introduce yourself according to system prompt in 3 lines with greeting message"
       );
-      promptData.append("aiModelId", selectedModelId);
+      promptData.append("aiModelId", selectedModel?._id);
       promptData.append("chatType", "new");
       const { conversationId } = await userTextPrompt.mutateAsync(promptData, {
         onSettled: () => {
@@ -217,8 +219,8 @@ useEffect(() => {
   };
 
   const handleSendMessage = async (text) => {
-    if (!text.trim() || !selectedModelId) {
-      if (!selectedModelId) toast.error("Please select a model");
+    if (!text.trim() || !selectedModel) {
+      if (!selectedModel) toast.error("Please select a model");
       return;
     }
     setIsProcessing(true);
@@ -235,7 +237,7 @@ useEffect(() => {
     try {
       const promptData = new FormData();
       promptData.append("prompt", text);
-      promptData.append("aiModelId", selectedModelId);
+      promptData.append("aiModelId", selectedModel?._id);
       if (selectedChatId) promptData.append("conversationId", selectedChatId);
       selectedFiles.forEach((file) => {
         promptData.append("files", file);
@@ -315,7 +317,7 @@ useEffect(() => {
                 models={models || []}
                 conversations={conversations || []}
                 selectedChatId={selectedChatId}
-                selectedModelId={selectedModelId}
+                selectedModelId={selectedModel?._id}
                 onSelectChat={handleSelectChat}
                 onSelectModel={handleSelectModel}
                 onCreateChat={handleCreateChat}
@@ -334,7 +336,7 @@ useEffect(() => {
               models={models || []}
               conversations={conversations || []}
               selectedChatId={selectedChatId}
-              selectedModelId={selectedModelId}
+              selectedModelId={selectedModel?._id}
               onSelectChat={handleSelectChat}
               onSelectModel={handleSelectModel}
               onCreateChat={handleCreateChat}
@@ -457,7 +459,7 @@ useEffect(() => {
                     <TextInput
                       onSubmit={() => handleSendMessage(inputValue)}
                       placeholder="Message NOVA 1000™"
-                      disabled={isProcessing || isSending || !selectedModelId}
+                      disabled={isProcessing || isSending || !selectedModel}
                       value={inputValue}
                       setValue={setInputValue}
                     />
@@ -524,7 +526,11 @@ useEffect(() => {
                     <button
                       type="button"
                       className=""
-                      onClick={()=>navigate(`/voice?aiModelId=${selectedModelId}&conversationId=${selectedChatId}`)}
+                      onClick={() =>
+                        navigate(
+                          `/voice?aiModelId=${selectedModel?._id}&aiModelIdFirstMessage=${selectedModel?.description}&conversationId=${selectedChatId}`
+                        )
+                      }
                       title="Start voice input"
                     >
                       <span className="sr-only">Start voice input</span>
@@ -544,7 +550,11 @@ useEffect(() => {
           </div>
         </div>
       </div>
-      <MenuOverlay isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+      <MenuOverlay
+        voiceModeURL={`/voice?aiModelId=${selectedModel?._id}&aiModelIdFirstMessage=${selectedModel?.description}&conversationId=${selectedChatId}`}
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+      />
     </>
   );
 }

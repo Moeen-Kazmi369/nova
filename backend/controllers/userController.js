@@ -25,8 +25,6 @@ const upload = multer({
   },
 }).array("files", 3);
 
-
-
 exports.getAllAIModels = async (req, res) => {
   try {
     // Fetch active AI Models with selected fields
@@ -58,7 +56,7 @@ exports.userTextPrompt = async (req, res) => {
     if (uploadErr) return res.status(400).json({ message: uploadErr.message });
     const userId = req.user.id;
     try {
-      const {conversationId, prompt,chatType, aiModelId } = req.body;
+      const { conversationId, prompt, chatType, aiModelId } = req.body;
 
       if (!prompt || !aiModelId) {
         return res
@@ -114,14 +112,17 @@ exports.userTextPrompt = async (req, res) => {
         });
         const queryEmbedding = embeddingResponse.data[0].embedding;
 
-        let { data, error } = await supabase
-          .from("documents")
-          .select("content")
-          .order("embedding <-> ?", true, { params: [queryEmbedding] })
-          .limit(5);
+      
+        const { data, error } = await supabase.rpc("match_documents", {
+          query_embedding: queryEmbedding,
+          match_count: 5,
+        });
 
-        if (error) console.error("Supabase RAG query error:", error);
-        else relatedChunks = data.map((item) => item.content);
+        if (error) {
+          console.error("Supabase RAG query error:", error);
+        } else {
+          relatedChunks = data.map((item) => item.content);
+        }
       }
 
       // Prepare messages for OpenAI chat
@@ -147,7 +148,23 @@ exports.userTextPrompt = async (req, res) => {
           content: `Additional document input:\n${ragContext}`,
         });
       }
-        messages.push({ role: "user", content: prompt });
+      messages.push({ role: "user", content: prompt });
+      // Add conversation history (excluding system messages we just added)
+      let userMessages = [];
+      if (conversationId) {
+        const conversation = await Conversation.findById(conversationId);
+        if (!conversation) {
+          return res.status(404).json({ message: "Conversation not found" });
+        }
+        userMessages = conversation.messages
+          .filter((m) => m.sender === "user" || m.sender === "ai")
+          .slice(-5) // Get the last 5 messages
+          .map((m) => ({
+            role: m.sender === "ai" ? "assistant" : "user",
+            content: m.text,
+          }));
+      }
+      messages = [...messages, ...userMessages];
       // Generate AI response
       const completion = await openaiClient.chat.completions.create({
         model: model.apiConfig?.chatModel || "gpt-4o-mini",
@@ -167,7 +184,7 @@ exports.userTextPrompt = async (req, res) => {
         // Generate conversation name from first user message
         const conversationName = await generateConversationName(
           openaiClient,
-          promptValue,
+          promptValue
         );
 
         conversation = new Conversation({
@@ -228,12 +245,10 @@ exports.userTextPrompt = async (req, res) => {
       });
     } catch (error) {
       console.error("userTextPrompt error:", error);
-      res
-        .status(500)
-        .json({
-          message: "Failed to process user prompt",
-          error: error.message,
-        });
+      res.status(500).json({
+        message: "Failed to process user prompt",
+        error: error.message,
+      });
     }
   });
 };
@@ -269,12 +284,10 @@ exports.getConversationMessagesById = async (req, res) => {
 
     res.json(conversation.messages); // messages order preserved as inserted
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Failed to fetch conversation messages",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to fetch conversation messages",
+      error: error.message,
+    });
   }
 };
 
@@ -303,54 +316,275 @@ exports.deleteConversationById = async (req, res) => {
 };
 
 // New controller for ElevenLabs Custom LLM integration (OpenAI-compatible format)
+// exports.elevenLabsLLM = async (req, res) => {
+//   try {
+//     // Extract OpenAI-compatible fields
+//     const { elevenlabs_extra_body, messages, stream = false } = req.body;
+//     const { aiModelId, conversationId, chatType, userId } =
+//       elevenlabs_extra_body;
+//     if (!aiModelId || !messages || !Array.isArray(messages)) {
+//       return res.status(400).json({
+//         error: {
+//           message: "model and messages are required",
+//           type: "invalid_request_error",
+//         },
+//       });
+//     }
+
+//     // Get the last user message for processing
+//     const lastUserMessage = messages.findLast((m) => m.role === "user");
+//     if (!lastUserMessage) {
+//       return res.status(400).json({
+//         error: {
+//           message: "No user message found in messages array",
+//           type: "invalid_request_error",
+//         },
+//       });
+//     }
+
+//     const prompt = lastUserMessage.content;
+
+//     // Fetch AI Model and prepare OpenAI client
+//     const model = await AIModel.findById(aiModelId);
+//     if (!model || model.status !== "active") {
+//       return res.status(400).json({
+//         error: {
+//           message: "Invalid or inactive AI Model",
+//           type: "invalid_request_error",
+//         },
+//       });
+//     }
+
+//     const openaiApiKey = model.apiConfig?.apiKey || process.env.OPENAI_API_KEY;
+//     const openaiClient = new openai.OpenAI({ apiKey: openaiApiKey });
+
+//     // Process RAG context from AI Model stored fullTextContent
+//     let ragContext = "";
+//     if (model.fullTextContent) {
+//       ragContext += "\n" + model.fullTextContent;
+//     }
+
+//     // Semantic search in Supabase vector DB using prompt
+//     let relatedChunks = [];
+//     if (ragContext.trim() && model.ragTableName) {
+//       const embeddingResponse = await openaiClient.embeddings.create({
+//         model: "text-embedding-3-large",
+//         input: prompt,
+//       });
+//       const queryEmbedding = embeddingResponse.data[0].embedding;
+
+//       let { data, error } = await supabase
+//         .from("documents")
+//         .select("content")
+//         .order("embedding <-> ?", true, { params: [queryEmbedding] })
+//         .limit(5);
+
+//       if (error) console.error("Supabase RAG query error:", error);
+//       else relatedChunks = data.map((item) => item.content);
+//     }
+
+//     // Prepare messages for OpenAI chat with RAG context
+//     const systemPrompt =
+//       model.apiConfig?.systemPrompt || "You are a helpful assistant.";
+
+//     // Build context-aware messages array
+//     let contextAwareMessages = [{ role: "system", content: systemPrompt }];
+
+//     // Add RAG context if available
+//     if (relatedChunks.length > 0) {
+//       contextAwareMessages.push({
+//         role: "system",
+//         content: `Relevant context from documents:\n${relatedChunks.join(
+//           "\n\n"
+//         )}`,
+//       });
+//     }
+
+//     if (ragContext.trim()) {
+//       contextAwareMessages.push({
+//         role: "system",
+//         content: `Additional document input:\n${ragContext}`,
+//       });
+//     }
+
+//     // Add conversation history (excluding system messages we just added)
+//     let userMessages = [];
+//     if (conversationId) {
+//       const conversation = await Conversation.findById(conversationId);
+//       if (!conversation) {
+//         return res.status(404).json({ message: "Conversation not found" });
+//       }
+//       userMessages = conversation.messages
+//         .filter((m) => m.sender === "user" || m.sender === "ai")
+//         .slice(-5) // Get the last 5 messages
+//         .map((m) => ({
+//           role: m.sender === "ai" ? "assistant" : m.sender,
+//           content: m.text,
+//         }));
+//     } else {
+//       userMessages = messages
+//         .filter((m) => m.role === "user" || m.role === "assistant")
+//         .slice(-5); // Get the last 5 messages
+//     }
+//     contextAwareMessages = [...contextAwareMessages, ...userMessages];
+//     // Generate AI response
+//     const completion = await openaiClient.chat.completions.create({
+//       model: model.apiConfig?.chatModel || "gpt-4o-mini",
+//       messages: contextAwareMessages,
+//       max_tokens: model.apiConfig?.maxTokens || 1000,
+//       temperature: model.apiConfig?.temperature || 0.7,
+//       stream: false, // ElevenLabs doesn't support streaming in this context
+//     });
+
+//     const aiReply =
+//       completion.choices[0].message?.content || "No response generated";
+//     // Create or update conversation
+//     let conversation;
+
+//     if (!conversationId) {
+//       const promptValue = chatType === "new" ? aiReply : prompt;
+//       // Generate conversation name from first user message
+//       const conversationName = await generateConversationName(
+//         openaiClient,
+//         promptValue
+//       );
+
+//       conversation = new Conversation({
+//         userId,
+//         aiModelId,
+//         conversationName,
+//         messages: [
+//           ...(chatType !== "new"
+//             ? [
+//                 {
+//                   sender: "user",
+//                   text: prompt,
+//                   attachments: [],
+//                 },
+//               ]
+//             : []),
+//           {
+//             sender: "ai",
+//             text: aiReply,
+//             attachments: [],
+//           },
+//         ],
+//       });
+//     } else {
+//       conversation = await Conversation.findById(conversationId);
+//       if (!conversation) {
+//         return res.status(404).json({ message: "Conversation not found" });
+//       }
+//       conversation.messages.push({
+//         sender: "user",
+//         text: prompt,
+//         attachments: [],
+//       });
+//       conversation.messages.push({
+//         sender: "ai",
+//         text: aiReply,
+//         attachments: [],
+//       });
+//     }
+
+//     conversation.updatedAt = new Date();
+//     await conversation.save();
+//     // Return OpenAI-compatible response
+//     res.json({
+//       id: `chatcmpl-${Date.now()}`,
+//       object: "chat.completion",
+//       created: Math.floor(Date.now() / 1000),
+//       model: aiModelId,
+//       choices: [
+//         {
+//           index: 0,
+//           message: {
+//             role: "assistant",
+//             content: aiReply,
+//           },
+//           finish_reason: "stop",
+//         },
+//       ],
+//       usage: {
+//         prompt_tokens: prompt.length,
+//         completion_tokens: aiReply.length,
+//         total_tokens: prompt.length + aiReply.length,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("elevenLabsLLM error:", error);
+//     res.status(500).json({
+//       error: {
+//         message: "Failed to process request",
+//         type: "server_error",
+//         details: error.message,
+//       },
+//     });
+//   }
+// };
+
+// Controller for ElevenLabs Custom LLM integration with streaming
 exports.elevenLabsLLM = async (req, res) => {
+  const request = req.body;
+  const { elevenlabs_extra_body, messages } = request;
+  const { aiModelId, conversationId, chatType, userId } =
+    elevenlabs_extra_body || {};
+
+  // Map user_id to user if present
+  const oaiRequest = { ...request };
+  if (userId) {
+    oaiRequest.user = userId;
+    delete oaiRequest.elevenlabs_extra_body.userId;
+  }
+
+  // Validate inputs
+  if (!aiModelId || !messages || !Array.isArray(messages)) {
+    return res.status(400).json({
+      error: {
+        message: "model and messages are required",
+        type: "invalid_request_error",
+      },
+    });
+  }
+
+  // Get the last user message
+  const lastUserMessage = messages.findLast((m) => m.role === "user");
+  if (!lastUserMessage) {
+    return res.status(400).json({
+      error: {
+        message: "No user message found in messages array",
+        type: "invalid_request_error",
+      },
+    });
+  }
+
+  const prompt = lastUserMessage.content;
+
+  // Set headers for streaming response
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
   try {
-    // Extract OpenAI-compatible fields
-    const { model: aiModelId, messages, stream = false } = req.body;
-     console.log(req.body);
-    if (!aiModelId || !messages || !Array.isArray(messages)) {
-      return res.status(400).json({ 
-        error: { 
-          message: "model and messages are required", 
-          type: "invalid_request_error" 
-        } 
-      });
-    }
-
-    // Get the last user message for processing
-    const lastUserMessage = messages.findLast(m => m.role === 'user');
-    if (!lastUserMessage) {
-      return res.status(400).json({ 
-        error: { 
-          message: "No user message found in messages array", 
-          type: "invalid_request_error" 
-        } 
-      });
-    }
-
-    const prompt = lastUserMessage.content;
-    
     // Fetch AI Model and prepare OpenAI client
     const model = await AIModel.findById(aiModelId);
     if (!model || model.status !== "active") {
-      return res.status(400).json({ 
-        error: { 
-          message: "Invalid or inactive AI Model", 
-          type: "invalid_request_error" 
-        } 
-      });
+      throw new Error("Invalid or inactive AI Model");
     }
 
     const openaiApiKey = model.apiConfig?.apiKey || process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      throw new Error("OpenAI API key not configured");
+    }
     const openaiClient = new openai.OpenAI({ apiKey: openaiApiKey });
 
-    // Process RAG context from AI Model stored fullTextContent
+    // Process RAG context
     let ragContext = "";
     if (model.fullTextContent) {
       ragContext += "\n" + model.fullTextContent;
     }
 
-    // Semantic search in Supabase vector DB using prompt
+    // Semantic search in Supabase vector DB
     let relatedChunks = [];
     if (ragContext.trim() && model.ragTableName) {
       const embeddingResponse = await openaiClient.embeddings.create({
@@ -359,29 +593,29 @@ exports.elevenLabsLLM = async (req, res) => {
       });
       const queryEmbedding = embeddingResponse.data[0].embedding;
 
-      let { data, error } = await supabase
-        .from("documents")
-        .select("content")
-        .order("embedding <-> ?", true, { params: [queryEmbedding] })
-        .limit(5);
+      const { data, error } = await supabase.rpc("match_documents", {
+        query_embedding: queryEmbedding,
+        match_count: 5,
+      });
 
-      if (error) console.error("Supabase RAG query error:", error);
-      else relatedChunks = data.map((item) => item.content);
+      if (error) {
+        console.error("Supabase RAG query error:", error);
+      } else {
+        relatedChunks = data.map((item) => item.content);
+      }
     }
 
-    // Prepare messages for OpenAI chat with RAG context
-    const systemPrompt = model.apiConfig?.systemPrompt || "You are a helpful assistant.";
-    
-    // Build context-aware messages array
-    let contextAwareMessages = [
-      { role: "system", content: systemPrompt }
-    ];
+    // Prepare messages with RAG context
+    const systemPrompt =
+      model.apiConfig?.systemPrompt || "You are a helpful assistant.";
+    let contextAwareMessages = [{ role: "system", content: systemPrompt }];
 
-    // Add RAG context if available
     if (relatedChunks.length > 0) {
       contextAwareMessages.push({
         role: "system",
-        content: `Relevant context from documents:\n${relatedChunks.join("\n\n")}`,
+        content: `Relevant context from documents:\n${relatedChunks.join(
+          "\n\n"
+        )}`,
       });
     }
 
@@ -392,50 +626,107 @@ exports.elevenLabsLLM = async (req, res) => {
       });
     }
 
-    // Add conversation history (excluding system messages we just added)
-    const userMessages = messages.filter(m => m.role === 'user' || m.role === 'assistant');
+    // Add conversation history
+    let userMessages = [];
+    if (conversationId) {
+      const conversation = await Conversation.findById(conversationId);
+      if (!conversation) {
+        throw new Error("Conversation not found");
+      }
+      userMessages = conversation.messages
+        .filter((m) => m.sender === "user" || m.sender === "ai")
+        .slice(-5)
+        .map((m) => ({
+          role: m.sender === "ai" ? "assistant" : m.sender,
+          content: m.text,
+        }));
+    } else {
+      userMessages = messages
+        .filter((m) => m.role === "user" || m.role === "assistant")
+        .slice(-5);
+    }
     contextAwareMessages = [...contextAwareMessages, ...userMessages];
 
-    // Generate AI response
-    const completion = await openaiClient.chat.completions.create({
+    // Send initial buffer chunk
+    const initialChunk = {
+      id: `chatcmpl-buffer-${Date.now()}`,
+      object: "chat.completion.chunk",
+      created: Math.floor(Date.now() / 1000),
+      model: aiModelId,
+      choices: [
+        {
+          delta: { content: "Let me think about that... " },
+          index: 0,
+          finish_reason: null,
+        },
+      ],
+    };
+    res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
+
+    // Generate AI response with streaming
+    const stream = await openaiClient.chat.completions.create({
       model: model.apiConfig?.chatModel || "gpt-4o-mini",
       messages: contextAwareMessages,
       max_tokens: model.apiConfig?.maxTokens || 1000,
       temperature: model.apiConfig?.temperature || 0.7,
-      stream: false // ElevenLabs doesn't support streaming in this context
+      stream: true,
     });
 
-    const aiReply = completion.choices[0].message?.content || "No response generated";
+    let aiReply = "";
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      aiReply += content;
+      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+    }
 
-    // Return OpenAI-compatible response
-    res.json({
-      id: `chatcmpl-${Date.now()}`,
-      object: "chat.completion",
-      created: Math.floor(Date.now() / 1000),
-      model: aiModelId,
-      choices: [{
-        index: 0,
-        message: {
-          role: "assistant",
-          content: aiReply,
-        },
-        finish_reason: "stop"
-      }],
-      usage: {
-        prompt_tokens: prompt.length,
-        completion_tokens: aiReply.length,
-        total_tokens: prompt.length + aiReply.length
+    // Create or update conversation
+    let conversation;
+    if (!conversationId) {
+      const promptValue = chatType === "new" ? aiReply : prompt;
+      const conversationName = await generateConversationName(
+        openaiClient,
+        promptValue
+      );
+
+      conversation = new Conversation({
+        userId,
+        aiModelId,
+        conversationName,
+        messages: [
+          ...(chatType !== "new"
+            ? [{ sender: "user", text: prompt, attachments: [] }]
+            : []),
+          { sender: "ai", text: aiReply, attachments: [] },
+        ],
+      });
+    } else {
+      conversation = await Conversation.findById(conversationId);
+      if (!conversation) {
+        throw new Error("Conversation not found");
       }
-    });
+      conversation.messages.push(
+        { sender: "user", text: prompt, attachments: [] },
+        { sender: "ai", text: aiReply, attachments: [] }
+      );
+    }
 
+    conversation.updatedAt = new Date();
+    await conversation.save();
+
+    // Signal end of stream
+    res.write("data: [DONE]\n\n");
+    res.end();
   } catch (error) {
     console.error("elevenLabsLLM error:", error);
-    res.status(500).json({ 
-      error: { 
-        message: "Failed to process request", 
-        type: "server_error",
-        details: error.message 
-      } 
-    });
+    res.write(
+      `data: ${JSON.stringify({
+        error: {
+          message: "Internal error occurred!",
+          type: "server_error",
+          details: error.message,
+        },
+      })}\n\n`
+    );
+    res.end();
   }
 };

@@ -11,20 +11,17 @@ const VoiceModePage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
-  const [transcripts, setTranscripts] = useState([]);
-  const transcriptsRef = useRef([]);
 
   // Get aiModelId and conversationId from URL query parameters
   const aiModelId = searchParams.get("aiModelId");
+  const aiModelIdFirstMessage = searchParams.get("aiModelIdFirstMessage");
   const conversationId = searchParams.get("conversationId");
 
   const conversation = useConversation({
     onConnect: () => console.log("Connected"),
     onDisconnect: async () => {
       console.log("Disconnected");
-      await handleSaveSession(); // 👈 Await async save
     },
-    onMessage: (msg) => setTranscripts((prev) => [...prev, msg]),
     onError: (err) => console.error("Conversation error:", err),
   });
   const [isListening, setIsListening] = useState(false);
@@ -35,12 +32,21 @@ const VoiceModePage = () => {
   const startConversation = useCallback(async () => {
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
+      const userId = JSON.parse(localStorage.getItem("user") || "{}")?.userId;
       await conversation.startSession({
         agentId: import.meta.env.VITE_ELEVEN_LAB_AGENT_ID,
         connectionType: "webrtc",
-        // Pass AI model ID and conversation ID as custom parameters
-        ...(aiModelId && { model: aiModelId }),
-        ...(conversationId && { conversationId: conversationId }),
+        overrides: {
+          agent: {
+            firstMessage: aiModelIdFirstMessage || "Hi there! Welcome to NOVA 1000. How can I help you today?",
+          }
+        },
+        customLlmExtraBody: {
+          conversationId,
+          aiModelId,
+          chatType: conversationId ? "old" : "new",
+          userId,
+        },
       });
     } catch (error) {
       console.error("Failed to start conversation:", error);
@@ -58,10 +64,6 @@ const VoiceModePage = () => {
   }, [startConversation]);
 
   useEffect(() => {
-    transcriptsRef.current = transcripts;
-  }, [transcripts]);
-
-  useEffect(() => {
     let timeout;
 
     if (connectionStatus === "connected" && !isSpeaking) {
@@ -75,47 +77,6 @@ const VoiceModePage = () => {
 
     return () => clearTimeout(timeout);
   }, [connectionStatus, isSpeaking]);
-
-  const getToken = () => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    return user.token;
-  };
-
-  const handleSaveSession = async () => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const userId = user?.user?._id;
-    const latestTranscripts = transcriptsRef.current;
-    if (!userId || latestTranscripts.length <= 0) {
-      return console.warn("No user or transcripts to save");
-    }
-
-    try {
-      const token = getToken();
-      if (!token) return;
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_API_URI}/api/chat/voice-chat/save`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId,
-            transcripts: latestTranscripts,
-          }),
-        }
-      );
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to save");
-
-      console.log("Saved chat:", data.chat);
-      window.location.reload();
-    } catch (error) {
-      console.error("Save session error:", error);
-    }
-  };
 
   return (
     <>

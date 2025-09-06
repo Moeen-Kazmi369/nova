@@ -244,7 +244,7 @@ console.log(messages);
             />
           </label>
           <label className="block">
-            <span className="block mb-1 font-medium">Description</span>
+            <span className="block mb-1 font-medium">First Message</span>
             <textarea
               name="description"
               value={config.description}
