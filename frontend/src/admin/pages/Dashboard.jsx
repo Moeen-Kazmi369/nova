@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Trash2, Plus, User, Layers, LogOut } from "lucide-react";
 import { Dialog } from "@headlessui/react";
 import Icon from "../../assets/Icon.png";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   useGetUsers,
@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [email, setEmail] = useState("");
   const [inviteLink, setInviteLink] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Fetch users and models
   const {
@@ -36,12 +37,16 @@ export default function Dashboard() {
   } = useGetAllAIModelsForAdmin();
   const deleteUser = useDeleteUser();
   const deleteAIModel = useDeleteAIModel();
-
+  useEffect(() => {
+    const navOption =
+      new URLSearchParams(location.search).get("navOption") || "users";
+    setSelectedNav(navOption);
+  }, [location.pathname]);
   // Generate invite link
   const handleGenerateLink = () => {
     // Simulate invite link generation
     setInviteLink(
-      `${window.location.origin}?email=${encodeURIComponent(email)}`
+      `${window.location.origin}/login?email=${encodeURIComponent(email)}`
     );
   };
 
@@ -105,7 +110,7 @@ export default function Dashboard() {
       <aside className="w-64 flex flex-col bg-gray-900 p-6">
         <div className="flex items-center mb-12 space-x-2">
           {/* <Layers className="h-8 w-8 text-blue-400" /> */}
-                      <img src={Icon} alt="logo" className="w-8 " />
+          <img src={Icon} alt="logo" className="w-8 " />
 
           <h1 className="text-2xl font-bold">NOVA 1000</h1>
         </div>
@@ -218,9 +223,7 @@ export default function Dashboard() {
                   >
                     <div
                       onClick={() =>
-                        navigate(
-                          `/admin/ai-model-config/${model._id}`
-                        )
+                        navigate(`/admin/ai-model-config/${model._id}`)
                       }
                     >
                       <h3 className="text-lg font-semibold">{model.name}</h3>

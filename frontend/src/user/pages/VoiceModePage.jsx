@@ -16,6 +16,7 @@ const VoiceModePage = () => {
   const aiModelId = searchParams.get("aiModelId");
   const aiModelIdFirstMessage = searchParams.get("aiModelIdFirstMessage");
   const conversationId = searchParams.get("conversationId");
+  const aiModelName = searchParams.get("aiModelName");
 
   const conversation = useConversation({
     onConnect: () => console.log("Connected"),
@@ -134,7 +135,7 @@ const VoiceModePage = () => {
 
           {isDesktop && (
             <div className="text-center text-gray-500 text-xs">
-              <p>Real-time voice conversation with ElevenLabs & Whisper</p>
+              <p>Real-time voice with {aiModelName}</p>
             </div>
           )}
           <div className="text-center mt-4">
@@ -161,7 +162,10 @@ const VoiceModePage = () => {
         </div>
 
         <div className="flex-shrink-0 text-center py-2 text-gray-500 text-xs mobile-safe-bottom">
-          <p>Powered by ElevenLabs & OpenAI Whisper</p>
+          <p>
+            Powered by 1000× Dimensional Cognition Cube™ — Secured by
+            Dimensional Integrity Engine™ + Immortal Logic
+          </p>
         </div>
       </div>
 

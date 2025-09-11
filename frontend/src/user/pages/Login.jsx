@@ -12,7 +12,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const redirect = new URLSearchParams(location.search).get("redirect") || "/";
-  const emailQuery = new URLSearchParams(location.search).get("email") || "/";
+  const emailQuery = new URLSearchParams(location.search).get("email") || "";
   React.useEffect(() => {
     if (emailQuery) {
       setEmail(emailQuery);

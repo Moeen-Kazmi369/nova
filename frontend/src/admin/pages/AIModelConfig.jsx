@@ -126,7 +126,7 @@ console.log(messages);
         toast.success("Model created successfully");
         // After create, perhaps redirect to edit page with new id, but assuming handled outside
       }
-      navigate("/admin");
+      navigate("/admin?navOption=models");
     } catch (err) {
       toast.error(err.message || "Failed to save Model");
     } finally {
@@ -221,13 +221,15 @@ console.log(messages);
       <div className="w-1/3 bg-slate-900 border-r border-slate-800 flex flex-col">
         {/* Title (fixed) */}
         <div className="p-6 flex flex-col gap-2 flex-shrink-0 border-b border-slate-800">
-          <ArrowLeft onClick={()=>navigate("/admin")} className="text-white mt-1 cursor-pointer"/>
+          <ArrowLeft
+            onClick={() => navigate("/admin?navOption=models")}
+            className="text-white mt-1 cursor-pointer"
+          />
           {id === "new" ? (
-          <h2 className="text-2xl font-bold">Create Nova 1000 AI Model</h2>
-          ):(
-              <h2 className="text-2xl font-bold">Configure {config.name}</h2> 
-          )
-}
+            <h2 className="text-2xl font-bold">Create Nova 1000 AI Model</h2>
+          ) : (
+            <h2 className="text-2xl font-bold">Configure {config.name}</h2>
+          )}
         </div>
 
         {/* Scrollable form */}
@@ -244,7 +246,7 @@ console.log(messages);
             />
           </label>
           <label className="block">
-            <span className="block mb-1 font-medium">First Message</span>
+            <span className="block mb-1 font-medium">Description</span>
             <textarea
               name="description"
               value={config.description}
@@ -255,7 +257,7 @@ console.log(messages);
             />
           </label>
           <label className="block">
-            <span className="block mb-1 font-medium">System Prompt</span>
+            <span className="block mb-1 font-medium">Instructions</span>
             <textarea
               name="apiConfig.systemPrompt"
               value={config.apiConfig.systemPrompt}
@@ -291,7 +293,7 @@ console.log(messages);
             />
           </label>
           <label className="block">
-            <span className="block mb-1 font-medium">Chat Model</span>
+            <span className="block mb-1 font-medium">Recommended Model</span>
             <select
               name="apiConfig.chatModel"
               value={config.apiConfig.chatModel}
@@ -317,7 +319,7 @@ console.log(messages);
           </label>
           <label className="block">
             <span className="block mb-1 font-medium">
-              Upload Files (Optional, max 3)
+              Knowledge
             </span>
             <input
               type="file"
@@ -374,11 +376,7 @@ console.log(messages);
               isActive={false || isSpeaking || isProcessing}
               isUserInput={false && !isSpeaking}
               audioLevel={
-                false
-                  ? audioLevel
-                  : isSpeaking
-                  ? Math.random() * 0.8 + 0.2
-                  : 0
+                false ? audioLevel : isSpeaking ? Math.random() * 0.8 + 0.2 : 0
               }
               size={true ? 165 : 130}
               className="mx-auto"

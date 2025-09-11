@@ -528,7 +528,7 @@ useEffect(() => {
                       className=""
                       onClick={() =>
                         navigate(
-                          `/voice?aiModelId=${selectedModel?._id}&aiModelIdFirstMessage=${selectedModel?.description}&conversationId=${selectedChatId}`
+                          `/voice?aiModelId=${selectedModel?._id}&aiModelIdFirstMessage=${selectedModel?.description}&conversationId=${selectedChatId}&aiModelName=${selectedModel?.name}`
                         )
                       }
                       title="Start voice input"

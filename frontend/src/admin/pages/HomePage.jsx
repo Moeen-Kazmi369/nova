@@ -12,7 +12,7 @@ const HomePage = () => {
     const handleGenerateLink = () => {
       // Simulate invite link generation
       setInviteLink(
-        `${import.meta.env.VITE_USER_SIDE_API_URI}?email=${encodeURIComponent(
+        `${import.meta.env.VITE_USER_SIDE_API_URI}/login?email=${encodeURIComponent(
           email
         )}`
       );
