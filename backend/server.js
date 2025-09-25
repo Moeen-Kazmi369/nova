@@ -86,7 +86,7 @@ const startServer = async () => {
     
     if (!allConnected) {
       console.error("Some services failed to connect:", connections);
-      process.exit(1);
+      // process.exit(1);
     }
 
     // Start the server only if all connections are successful
