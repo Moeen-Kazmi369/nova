@@ -60,6 +60,7 @@ function HomePage() {
     data: conversations,
     isLoading: isConversationsLoading,
     error: conversationsError,
+    refetch: refetchConversations,
   } = useGetUserConversations();
   const {
     data: messages,
@@ -139,19 +140,20 @@ function HomePage() {
       );
       promptData.append("aiModelId", selectedModel?._id);
       promptData.append("chatType", "new");
-      await userTextPrompt.mutateAsync(promptData, {
-        onSuccess: (data) => {
-          console.log(data);
-          setSelectedChatId(data.conversationId);
-        },
-        onSettled: () => {
-          setIsCreatingNewChat(false);
-        },
-      });
+      const result = await userTextPrompt.mutateAsync(promptData);
+
+      // After creating the chat, refresh conversations and wait for completion
+      await refetchConversations();
+
+      // Now set the selected chat ID
+      setSelectedChatId(result.conversationId);
+
+      setIsCreatingNewChat(false);
       if (!isDesktop) setIsSidebarOpen(false);
       toast.success("New chat created");
     } catch (err) {
       toast.error(err.message || "Failed to create new chat");
+      setIsCreatingNewChat(false);
     }
   };
 
