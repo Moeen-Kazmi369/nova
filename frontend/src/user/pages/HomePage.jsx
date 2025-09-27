@@ -35,7 +35,7 @@ function HomePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isCreatingNewChat, setIsCreatingNewChat] = useState(false);
-  const [isLoading,setIsLoading]=useState(true)
+  const [isLoading, setIsLoading] = useState(true);
   const [isDeletingChatId, setIsDeletingChatId] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -48,7 +48,7 @@ function HomePage() {
   const [permissionStatus, setPermissionStatus] = useState("granted");
   const [chatMessages, setChatMessages] = useState([]);
   const messagesEndRef = useRef(null);
-  const navigate=useNavigate()
+  const navigate = useNavigate();
 
   // Fetch data using hooks
   const {
@@ -70,9 +70,9 @@ function HomePage() {
   const userTextPrompt = useUserTextPrompt();
   useEffect(() => {
     setTimeout(() => {
-      setIsLoading(false)
-    },2000)
-  },[])
+      setIsLoading(false);
+    }, 2000);
+  }, []);
   useEffect(() => {
     if (messages) {
       setChatMessages(messages);
@@ -97,21 +97,20 @@ function HomePage() {
     }
   }, [models]);
 
-useEffect(() => {
-  if (!conversations || conversations.length === 0) {
-    setSelectedChatId(null);
-    setChatMessages([]);
-    return;
-  }
+  useEffect(() => {
+    if (!conversations || conversations.length === 0) {
+      setSelectedChatId(null);
+      setChatMessages([]);
+      return;
+    }
 
-  // if selectedChatId is missing or deleted, reset
-  const exists = conversations.some((c) => c._id === selectedChatId);
-  if (!selectedChatId || !exists) {
-    setSelectedChatId(conversations[0]?._id || null);
-    setChatMessages([]); // clear old messages
-  }
-}, [conversations, selectedChatId]);
-
+    // if selectedChatId is missing or deleted, reset
+    const exists = conversations.some((c) => c._id === selectedChatId);
+    if (!selectedChatId || !exists) {
+      setSelectedChatId(conversations[0]?._id || null);
+      setChatMessages([]); // clear old messages
+    }
+  }, [conversations, selectedChatId]);
 
   const handleSelectChat = (chatId) => {
     setSelectedChatId(chatId);
@@ -140,12 +139,15 @@ useEffect(() => {
       );
       promptData.append("aiModelId", selectedModel?._id);
       promptData.append("chatType", "new");
-      const { conversationId } = await userTextPrompt.mutateAsync(promptData, {
+      await userTextPrompt.mutateAsync(promptData, {
+        onSuccess: (data) => {
+          console.log(data);
+          setSelectedChatId(data.conversationId);
+        },
         onSettled: () => {
           setIsCreatingNewChat(false);
         },
       });
-      setSelectedChatId(conversationId);
       if (!isDesktop) setIsSidebarOpen(false);
       toast.success("New chat created");
     } catch (err) {
@@ -168,8 +170,8 @@ useEffect(() => {
         toast.error(err.message || "Failed to delete chat");
       },
       onSettled: () => {
-    setIsDeletingChatId(false);
-      }
+        setIsDeletingChatId(false);
+      },
     });
   };
 
@@ -198,11 +200,32 @@ useEffect(() => {
   const handleFileSelect = (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
-      if (newFiles.length <= 3) {
-        setSelectedFiles(newFiles);
-      } else {
-        toast.error("Maximum 3 files allowed");
+      const maxSizeMB = 10;
+      const maxFiles = 3;
+
+      // Check total number of files
+      if (newFiles.length > maxFiles) {
+        toast.error(`Maximum ${maxFiles} files allowed`);
+        e.target.value = null; // Reset input
+        return;
       }
+
+      // Check size for each file
+      for (const file of newFiles) {
+        if (file.size > maxSizeMB * 1024 * 1024) {
+          toast.error(
+            `File "${file.name}" is too large: ${(
+              file.size /
+              (1024 * 1024)
+            ).toFixed(2)}MB. Max is ${maxSizeMB}MB.`
+          );
+          e.target.value = null; // Reset input
+          return;
+        }
+      }
+
+      // All checks passed, set files
+      setSelectedFiles(newFiles);
       e.target.value = null; // Reset input
     }
   };
@@ -234,6 +257,7 @@ useEffect(() => {
     };
     setChatMessages((prev) => [...prev, userMessage]);
     setInputValue("");
+    setSelectedFiles([]);
     try {
       const promptData = new FormData();
       promptData.append("prompt", text);
@@ -270,7 +294,7 @@ useEffect(() => {
       );
     }
   };
-  if(isLoading) return <LoadingScreen />;
+  if (isLoading) return <LoadingScreen />;
   return (
     <>
       <div
@@ -426,7 +450,19 @@ useEffect(() => {
                           key={index}
                           className="flex items-center space-x-2 bg-slate-800/70 rounded-xl p-2"
                         >
-                          {getFileIcon(file.type)}
+                          {file.type.startsWith("image/") ? (
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={file.name}
+                              className="w-12 h-12 object-cover rounded-md"
+                              onLoad={(e) => {
+                                // Clean up previous URL if any (optional, for safety)
+                                URL.revokeObjectURL(e.target.src);
+                              }}
+                            />
+                          ) : (
+                            getFileIcon(file.type)
+                          )}
                           <span className="text-sm text-gray-300">
                             {file.name}
                           </span>
