@@ -11,7 +11,7 @@ export const ChatMessage = ({
   setIsSpeaking,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
   const getFileIcon = (mimetype) => {
     if (mimetype.startsWith("image/")) return <ImageIcon className="w-5 h-5" />;
@@ -58,7 +58,9 @@ export const ChatMessage = ({
             <button
               onClick={async () => {
                 if (isPlaying) {
-                  audioRef.current?.pause();
+                  if (audioRef.current) {
+                    audioRef.current.pause();
+                  }
                   setIsPlaying(false);
                   setIsSpeaking(false);
                   return;
@@ -87,7 +89,10 @@ export const ChatMessage = ({
                   });
                   const audioUrl = URL.createObjectURL(audioBlob);
                   const audio = new Audio(audioUrl);
+
+                  // Fix: Ensure audioRef is properly assigned
                   audioRef.current = audio;
+
                   setIsPlaying(true);
                   setIsSpeaking(true);
                   setIsLoading(false);
@@ -96,14 +101,25 @@ export const ChatMessage = ({
                   audio.onended = () => {
                     setIsPlaying(false);
                     setIsSpeaking(false);
+                    // Clean up the audio reference
+                    if (audioRef.current === audio) {
+                      audioRef.current = null;
+                    }
                   };
+
                   audio.onerror = () => {
                     setIsPlaying(false);
                     setIsSpeaking(false);
+                    // Clean up the audio reference on error
+                    if (audioRef.current === audio) {
+                      audioRef.current = null;
+                    }
                   };
                 } catch (error) {
                   console.error("Speech error:", error);
                   setIsLoading(false);
+                  setIsPlaying(false);
+                  setIsSpeaking(false);
                 }
               }}
               className="text-gray-400 hover:text-white transition min-w-[20px] flex items-center justify-center"
