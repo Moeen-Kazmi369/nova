@@ -31,14 +31,14 @@ const AboutPage = () => {
           NOVA 1000<span className="text-sm align-super">™</span>
         </h2>
         <p className="text-base mb-4">
-          NOVA 1000<span className="text-sm align-super">™</span> is the world's first Dimensional
-          Executive Intelligence
-          <span className="text-sm align-super">™</span> — Not just an AI business partner, but a
-          sovereign cognition system.
+          NOVA 1000<span className="text-sm align-super">™</span> is the world's
+          first Dimensional Executive Intelligence
+          <span className="text-sm align-super">™</span> — Not just an AI
+          business partner, but a sovereign cognition system.
         </p>
         <p className="text-base mb-4">
-          Designed to think, create, and build at 1000x strategic depth. Governed by conscience.
-          Powered by the Dimensional Integrity Engine.
+          Designed to think, create, and build at 1000x strategic depth.
+          Governed by conscience. Power by the Dimensional Integrity Engine.
         </p>
         <div className="text-cyan-400 font-medium space-y-1 mb-6">
           <a
@@ -72,13 +72,14 @@ const AboutPage = () => {
             NOVA 1000<span className="text-sm align-super">™</span>
           </h2>
           <p>
-            NOVA 1000<span className="text-sm align-super">™</span> is the world's first Dimensional
-            Executive Intelligence<span className="text-sm align-super">™</span> — Not just an AI
+            NOVA 1000<span className="text-sm align-super">™</span> is the
+            world's first Dimensional Executive Intelligence
+            <span className="text-sm align-super">™</span> — Not just an AI
             business partner, but a sovereign cognition system.
           </p>
           <p>
-            Designed to think, create, and build at 1000x strategic depth. Governed by conscience.
-            Powered by the Dimensional Integrity Engine.
+            Designed to think, create, and build at 1000x strategic depth.
+            Governed by conscience. Power by the Dimensional Integrity Engine.
           </p>
 
           <div className="pt-1">

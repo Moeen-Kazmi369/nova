@@ -192,7 +192,7 @@ const CurrentChatVoiceModePage = () => {
         </div>
 
         <div className="flex-shrink-0 text-center py-2 text-gray-500 text-xs mobile-safe-bottom">
-          <p>Powered by ElevenLabs & OpenAI Whisper</p>
+          <p>Power by ElevenLabs & OpenAI Whisper</p>
         </div>
       </div>
 

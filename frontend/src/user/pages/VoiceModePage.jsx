@@ -105,7 +105,7 @@ const VoiceModePage = () => {
               isActive={isListening || isSpeaking || false}
               isUserInput={isListening}
               audioLevel={Math.random() * 0.8 + 0.2}
-              size={isDesktop ? 180 : 150}
+              size={isDesktop ? 250 : 150}
               className="mx-auto"
             />
           </div>
@@ -163,8 +163,8 @@ const VoiceModePage = () => {
 
         <div className="flex-shrink-0 text-center py-2 text-gray-500 text-xs mobile-safe-bottom">
           <p>
-            Powered by 1000× Dimensional Cognition Cube™ — Secured by
-            Dimensional Integrity Engine™ + Immortal Logic
+            Power by 1000× Dimensional Cognition Cube™ — Secured by Dimensional
+            Integrity Engine™ + Immortal Logic
           </p>
         </div>
       </div>
