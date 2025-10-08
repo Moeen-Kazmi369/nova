@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useConversation } from "@elevenlabs/react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Menu } from "lucide-react";
+import { Menu, Mic, MicOff } from "lucide-react";
 import { CircularWaveform } from "../components/CircularWaveform";
 import { MenuOverlay } from "../components/MenuOverlay";
 
@@ -11,7 +11,8 @@ const VoiceModePage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
-
+  const [micOn, setMicOn] = useState(true);
+  const [mediaStream, setMediaStream] = useState(null);
   // Get aiModelId and conversationId from URL query parameters
   const aiModelId = searchParams.get("aiModelId");
   const aiModelIdFirstMessage = searchParams.get("aiModelIdFirstMessage");
@@ -32,15 +33,18 @@ const VoiceModePage = () => {
 
   const startConversation = useCallback(async () => {
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMediaStream(stream);
       const userId = JSON.parse(localStorage.getItem("user") || "{}")?.userId;
       await conversation.startSession({
         agentId: import.meta.env.VITE_ELEVEN_LAB_AGENT_ID,
         connectionType: "webrtc",
         overrides: {
           agent: {
-            firstMessage: aiModelIdFirstMessage || "Hi there! Welcome to NOVA 1000. How can I help you today?",
-          }
+            firstMessage:
+              aiModelIdFirstMessage ||
+              "Hi there! Welcome to NOVA 1000. How can I help you today?",
+          },
         },
         customLlmExtraBody: {
           conversationId,
@@ -78,7 +82,17 @@ const VoiceModePage = () => {
 
     return () => clearTimeout(timeout);
   }, [connectionStatus, isSpeaking]);
-
+  const handleMicToggle = () => {
+    setMicOn((prev) => {
+      const newState = !prev;
+      if (mediaStream) {
+        mediaStream.getAudioTracks().forEach((track) => {
+          track.enabled = newState; // true = unmuted, false = muted
+        });
+      }
+      return newState;
+    });
+  };
   return (
     <>
       <div
@@ -100,10 +114,10 @@ const VoiceModePage = () => {
         </div>
 
         <div className="flex-1 py-6 flex flex-col items-center justify-center px-4">
-          <div className="mb-4">
+          <div className="mb-4 mt-[-20px]">
             <CircularWaveform
               isActive={isListening || isSpeaking || false}
-              isUserInput={isListening}
+              isUserInput={isListening || micOn}
               audioLevel={Math.random() * 0.8 + 0.2}
               size={isDesktop ? 250 : 150}
               className="mx-auto"
@@ -128,7 +142,7 @@ const VoiceModePage = () => {
                 NOVA 1000™ is speaking...
               </p>
             )}
-            {isListening && (
+            {isListening && micOn && (
               <p className="text-emerald-400 animate-pulse">Listening...</p>
             )}
           </div>
@@ -138,17 +152,33 @@ const VoiceModePage = () => {
               <p>Real-time voice with {aiModelName}</p>
             </div>
           )}
-          <div className="text-center mt-4">
+          <div className="flex justify-center gap-4 mt-4">
+            <button
+              onClick={handleMicToggle}
+              className={`p-2 rounded-full transition-colors flex items-center justify-center
+      ${
+        micOn
+          ? "bg-gray-800 text-gray-400 hover:text-white"
+          : "border border-red-500 text-red-500 bg-transparent"
+      }`}
+              aria-label={micOn ? "Turn mic off" : "Turn mic on"}
+            >
+              {micOn ? (
+                <Mic className="w-5 h-5" />
+              ) : (
+                <MicOff className="w-5 h-5" />
+              )}
+            </button>
             <button
               onClick={() => navigate("/")}
-              className="p-2 text-gray-400 bg-gray-800 rounded-full hover:text-white transition-colors"
+              className="p-2 text-gray-400 bg-gray-800 rounded-full hover:text-white transition-colors flex items-center justify-center"
+              aria-label="Close"
             >
               <svg
                 className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
               >
                 <path
                   strokeLinecap="round"
