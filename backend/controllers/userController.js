@@ -526,11 +526,10 @@ exports.deleteConversationById = async (req, res) => {
 // Controller for ElevenLabs Custom LLM integration with streaming
 exports.elevenLabsLLM = async (req, res) => {
   const request = req.body;
-  console.log("elevenLabsLLM request:", JSON.stringify(request));
   const { elevenlabs_extra_body, messages } = request;
   const { aiModelId, conversationId, chatType, userId } =
     elevenlabs_extra_body || {};
-
+  console.log("elevenLabsLLM request:", JSON.stringify(elevenlabs_extra_body));  
   // Map user_id to user if present
   const oaiRequest = { ...request };
   if (userId) {
