@@ -19,7 +19,7 @@ const VoiceModePage = () => {
   const aiModelName = searchParams.get("aiModelName");
 
   const conversation = useConversation({
-    micMuted: micOn,
+    micMuted: !micOn,
     onConnect: () => console.log("Connected"),
     onDisconnect: async () => {
       console.log("Disconnected");
@@ -41,6 +41,7 @@ const VoiceModePage = () => {
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
       const userId = JSON.parse(localStorage.getItem("user") || "{}")?.userId;
+      const chatType = conversationId && conversationId !== "null";
       await conversation.startSession({
         agentId: import.meta.env.VITE_ELEVEN_LAB_AGENT_ID,
         connectionType: "websocket",
@@ -52,10 +53,13 @@ const VoiceModePage = () => {
           },
         },
         customLlmExtraBody: {
-          conversationId,
-          aiModelId,
-          chatType: conversationId ? "old" : "new",
-          userId,
+          conversationId:
+            conversationId && conversationId !== "null"
+              ? conversationId
+              : undefined,
+          aiModelId: aiModelId && aiModelId !== "null" ? aiModelId : undefined,
+          chatType: chatType ? "old" : "new",
+          userId: userId && userId !== "null" ? userId : undefined,
         },
       });
     } catch (error) {

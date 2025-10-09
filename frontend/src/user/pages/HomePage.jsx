@@ -561,23 +561,30 @@ function HomePage() {
                         </a>
                       </div>
                     )}
-                    <button
-                      type="button"
-                      className=""
-                      onClick={() =>
-                        navigate(
-                          `/voice?aiModelId=${selectedModel?._id}&aiModelIdFirstMessage=${selectedModel?.description}&conversationId=${selectedChatId}&aiModelName=${selectedModel?.name}`
-                        )
-                      }
-                      title="Start voice input"
-                    >
-                      <span className="sr-only">Start voice input</span>
-                      <img
-                        src={micIcone}
-                        className="w-12 h-12"
-                        alt="Microphone"
-                      />
-                    </button>
+                    {selectedChatId && (
+                      <button
+                        type="button"
+                        className=""
+                        disabled={!selectedChatId}
+                        onClick={() =>
+                          navigate(
+                            `/voice?aiModelId=${selectedModel?._id}&aiModelIdFirstMessage=${selectedModel?.description}&conversationId=${selectedChatId}&aiModelName=${selectedModel?.name}`
+                          )
+                        }
+                        title="Start voice input"
+                      >
+                        <span className="sr-only">Start voice input</span>
+                        <img
+                          src={micIcone}
+                          className={`w-12 h-12 ${
+                            !selectedChatId
+                              ? "opacity-50 cursor-not-allowed"
+                              : ""
+                          }`}
+                          alt="Microphone"
+                        />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
