@@ -12,7 +12,6 @@ const VoiceModePage = () => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   const [micOn, setMicOn] = useState(true);
-  const [mediaStream, setMediaStream] = useState(null);
   // Get aiModelId and conversationId from URL query parameters
   const aiModelId = searchParams.get("aiModelId");
   const aiModelIdFirstMessage = searchParams.get("aiModelIdFirstMessage");
@@ -20,11 +19,18 @@ const VoiceModePage = () => {
   const aiModelName = searchParams.get("aiModelName");
 
   const conversation = useConversation({
+    micMuted: micOn,
     onConnect: () => console.log("Connected"),
     onDisconnect: async () => {
       console.log("Disconnected");
     },
     onError: (err) => console.error("Conversation error:", err),
+    onMessage: (message) => {
+      console.log("Received message:", message);
+    },
+    onAudio: (audio) => {
+      // console.log("Received audio chunk:", audio);
+    },
   });
   const [isListening, setIsListening] = useState(false);
 
@@ -33,12 +39,11 @@ const VoiceModePage = () => {
 
   const startConversation = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setMediaStream(stream);
+      await navigator.mediaDevices.getUserMedia({ audio: true });
       const userId = JSON.parse(localStorage.getItem("user") || "{}")?.userId;
       await conversation.startSession({
         agentId: import.meta.env.VITE_ELEVEN_LAB_AGENT_ID,
-        connectionType: "webrtc",
+        connectionType: "websocket",
         overrides: {
           agent: {
             firstMessage:
@@ -85,11 +90,6 @@ const VoiceModePage = () => {
   const handleMicToggle = () => {
     setMicOn((prev) => {
       const newState = !prev;
-      if (mediaStream) {
-        mediaStream.getAudioTracks().forEach((track) => {
-          track.enabled = newState; // true = unmuted, false = muted
-        });
-      }
       return newState;
     });
   };

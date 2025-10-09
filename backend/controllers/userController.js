@@ -526,6 +526,7 @@ exports.deleteConversationById = async (req, res) => {
 // Controller for ElevenLabs Custom LLM integration with streaming
 exports.elevenLabsLLM = async (req, res) => {
   const request = req.body;
+  console.log("elevenLabsLLM request:", JSON.stringify(request));
   const { elevenlabs_extra_body, messages } = request;
   const { aiModelId, conversationId, chatType, userId } =
     elevenlabs_extra_body || {};
