@@ -315,214 +315,6 @@ exports.deleteConversationById = async (req, res) => {
   }
 };
 
-// New controller for ElevenLabs Custom LLM integration (OpenAI-compatible format)
-// exports.elevenLabsLLM = async (req, res) => {
-//   try {
-//     // Extract OpenAI-compatible fields
-//     const { elevenlabs_extra_body, messages, stream = false } = req.body;
-//     const { aiModelId, conversationId, chatType, userId } =
-//       elevenlabs_extra_body;
-//     if (!aiModelId || !messages || !Array.isArray(messages)) {
-//       return res.status(400).json({
-//         error: {
-//           message: "model and messages are required",
-//           type: "invalid_request_error",
-//         },
-//       });
-//     }
-
-//     // Get the last user message for processing
-//     const lastUserMessage = messages.findLast((m) => m.role === "user");
-//     if (!lastUserMessage) {
-//       return res.status(400).json({
-//         error: {
-//           message: "No user message found in messages array",
-//           type: "invalid_request_error",
-//         },
-//       });
-//     }
-
-//     const prompt = lastUserMessage.content;
-
-//     // Fetch AI Model and prepare OpenAI client
-//     const model = await AIModel.findById(aiModelId);
-//     if (!model || model.status !== "active") {
-//       return res.status(400).json({
-//         error: {
-//           message: "Invalid or inactive AI Model",
-//           type: "invalid_request_error",
-//         },
-//       });
-//     }
-
-//     const openaiApiKey = model.apiConfig?.apiKey || process.env.OPENAI_API_KEY;
-//     const openaiClient = new openai.OpenAI({ apiKey: openaiApiKey });
-
-//     // Process RAG context from AI Model stored fullTextContent
-//     let ragContext = "";
-//     if (model.fullTextContent) {
-//       ragContext += "\n" + model.fullTextContent;
-//     }
-
-//     // Semantic search in Supabase vector DB using prompt
-//     let relatedChunks = [];
-//     if (ragContext.trim() && model.ragTableName) {
-//       const embeddingResponse = await openaiClient.embeddings.create({
-//         model: "text-embedding-3-large",
-//         input: prompt,
-//       });
-//       const queryEmbedding = embeddingResponse.data[0].embedding;
-
-//       let { data, error } = await supabase
-//         .from("documents")
-//         .select("content")
-//         .order("embedding <-> ?", true, { params: [queryEmbedding] })
-//         .limit(5);
-
-//       if (error) console.error("Supabase RAG query error:", error);
-//       else relatedChunks = data.map((item) => item.content);
-//     }
-
-//     // Prepare messages for OpenAI chat with RAG context
-//     const systemPrompt =
-//       model.apiConfig?.systemPrompt || "You are a helpful assistant.";
-
-//     // Build context-aware messages array
-//     let contextAwareMessages = [{ role: "system", content: systemPrompt }];
-
-//     // Add RAG context if available
-//     if (relatedChunks.length > 0) {
-//       contextAwareMessages.push({
-//         role: "system",
-//         content: `Relevant context from documents:\n${relatedChunks.join(
-//           "\n\n"
-//         )}`,
-//       });
-//     }
-
-//     if (ragContext.trim()) {
-//       contextAwareMessages.push({
-//         role: "system",
-//         content: `Additional document input:\n${ragContext}`,
-//       });
-//     }
-
-//     // Add conversation history (excluding system messages we just added)
-//     let userMessages = [];
-//     if (conversationId) {
-//       const conversation = await Conversation.findById(conversationId);
-//       if (!conversation) {
-//         return res.status(404).json({ message: "Conversation not found" });
-//       }
-//       userMessages = conversation.messages
-//         .filter((m) => m.sender === "user" || m.sender === "ai")
-//         .slice(-5) // Get the last 5 messages
-//         .map((m) => ({
-//           role: m.sender === "ai" ? "assistant" : m.sender,
-//           content: m.text,
-//         }));
-//     } else {
-//       userMessages = messages
-//         .filter((m) => m.role === "user" || m.role === "assistant")
-//         .slice(-5); // Get the last 5 messages
-//     }
-//     contextAwareMessages = [...contextAwareMessages, ...userMessages];
-//     // Generate AI response
-//     const completion = await openaiClient.chat.completions.create({
-//       model: model.apiConfig?.chatModel || "gpt-4o-mini",
-//       messages: contextAwareMessages,
-//       max_tokens: model.apiConfig?.maxTokens || 1000,
-//       temperature: model.apiConfig?.temperature || 0.7,
-//       stream: false, // ElevenLabs doesn't support streaming in this context
-//     });
-
-//     const aiReply =
-//       completion.choices[0].message?.content || "No response generated";
-//     // Create or update conversation
-//     let conversation;
-
-//     if (!conversationId) {
-//       const promptValue = chatType === "new" ? aiReply : prompt;
-//       // Generate conversation name from first user message
-//       const conversationName = await generateConversationName(
-//         openaiClient,
-//         promptValue
-//       );
-
-//       conversation = new Conversation({
-//         userId,
-//         aiModelId,
-//         conversationName,
-//         messages: [
-//           ...(chatType !== "new"
-//             ? [
-//                 {
-//                   sender: "user",
-//                   text: prompt,
-//                   attachments: [],
-//                 },
-//               ]
-//             : []),
-//           {
-//             sender: "ai",
-//             text: aiReply,
-//             attachments: [],
-//           },
-//         ],
-//       });
-//     } else {
-//       conversation = await Conversation.findById(conversationId);
-//       if (!conversation) {
-//         return res.status(404).json({ message: "Conversation not found" });
-//       }
-//       conversation.messages.push({
-//         sender: "user",
-//         text: prompt,
-//         attachments: [],
-//       });
-//       conversation.messages.push({
-//         sender: "ai",
-//         text: aiReply,
-//         attachments: [],
-//       });
-//     }
-
-//     conversation.updatedAt = new Date();
-//     await conversation.save();
-//     // Return OpenAI-compatible response
-//     res.json({
-//       id: `chatcmpl-${Date.now()}`,
-//       object: "chat.completion",
-//       created: Math.floor(Date.now() / 1000),
-//       model: aiModelId,
-//       choices: [
-//         {
-//           index: 0,
-//           message: {
-//             role: "assistant",
-//             content: aiReply,
-//           },
-//           finish_reason: "stop",
-//         },
-//       ],
-//       usage: {
-//         prompt_tokens: prompt.length,
-//         completion_tokens: aiReply.length,
-//         total_tokens: prompt.length + aiReply.length,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("elevenLabsLLM error:", error);
-//     res.status(500).json({
-//       error: {
-//         message: "Failed to process request",
-//         type: "server_error",
-//         details: error.message,
-//       },
-//     });
-//   }
-// };
-
 // Controller for ElevenLabs Custom LLM integration with streaming
 exports.elevenLabsLLM = async (req, res) => {
   const request = req.body;
@@ -564,6 +356,7 @@ exports.elevenLabsLLM = async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // Prevent buffering in nginx
 
   try {
     // Fetch AI Model and prepare OpenAI client
@@ -578,13 +371,14 @@ exports.elevenLabsLLM = async (req, res) => {
     }
     const openaiClient = new openai.OpenAI({ apiKey: openaiApiKey });
 
-    // Process RAG context
+    // Optimize RAG context to reduce token usage
     let ragContext = "";
     if (model.fullTextContent) {
-      ragContext += "\n" + model.fullTextContent;
+      // Limit RAG context to reduce token usage
+      ragContext += "\n" + model.fullTextContent.substring(0, 2000);
     }
 
-    // Semantic search in Supabase vector DB
+    // Semantic search in Supabase vector DB with token optimization
     let relatedChunks = [];
     if (ragContext.trim() && model.ragTableName) {
       const embeddingResponse = await openaiClient.embeddings.create({
@@ -595,38 +389,56 @@ exports.elevenLabsLLM = async (req, res) => {
 
       const { data, error } = await supabase.rpc("match_documents", {
         query_embedding: queryEmbedding,
-        match_count: 5,
+        match_count: 3, // Reduced from 5 to 3 to save tokens
       });
 
       if (error) {
         console.error("Supabase RAG query error:", error);
       } else {
-        relatedChunks = data.map((item) => item.content);
+        // Limit each chunk size to reduce token usage
+        relatedChunks = data.map((item) => item.content.substring(0, 500));
       }
     }
 
-    // Prepare messages with RAG context
+    // Prepare messages with optimized RAG context
     const systemPrompt =
       model.apiConfig?.systemPrompt || "You are a helpful assistant.";
+    
+    // Calculate approximate token count to avoid exceeding limits
+    const maxContextTokens = (model.apiConfig?.maxTokens || 1000) * 3; // Rough estimation
     let contextAwareMessages = [{ role: "system", content: systemPrompt }];
+    
+    let totalContextLength = systemPrompt.length;
 
     if (relatedChunks.length > 0) {
-      contextAwareMessages.push({
-        role: "system",
-        content: `Relevant context from documents:\n${relatedChunks.join(
-          "\n\n"
-        )}`,
-      });
+      const relevantContext = `Relevant context from documents:\n${relatedChunks.join(
+        "\n\n"
+      )}`;
+      
+      // Check if adding this would exceed token limits
+      if (totalContextLength + relevantContext.length < maxContextTokens) {
+        contextAwareMessages.push({
+          role: "system",
+          content: relevantContext,
+        });
+        totalContextLength += relevantContext.length;
+      }
     }
 
     if (ragContext.trim()) {
-      contextAwareMessages.push({
-        role: "system",
-        content: `Additional document input:\n${ragContext}`,
-      });
+      const additionalContext = `Additional document input:\n${ragContext}`;
+      
+      // Check if adding this would exceed token limits
+      if (totalContextLength + additionalContext.length < maxContextTokens) {
+        contextAwareMessages.push({
+          role: "system",
+          content: additionalContext,
+        });
+        totalContextLength += additionalContext.length;
+      }
     }
 
-    // Add conversation history
+    // Add conversation history (limited to save tokens)
     let userMessages = [];
     if (conversationId) {
       const conversation = await Conversation.findById(conversationId);
@@ -635,27 +447,36 @@ exports.elevenLabsLLM = async (req, res) => {
       }
       userMessages = conversation.messages
         .filter((m) => m.sender === "user" || m.sender === "ai")
-        .slice(-5)
+        .slice(-3) // Reduced from 5 to 3 to save tokens
         .map((m) => ({
           role: m.sender === "ai" ? "assistant" : m.sender,
-          content: m.text,
+          content: m.text.substring(0, 300), // Limit message length
         }));
     } else {
       userMessages = messages
         .filter((m) => m.role === "user" || m.role === "assistant")
-        .slice(-5);
+        .slice(-3) // Reduced from 5 to 3 to save tokens
+        .map((m) => ({
+          role: m.role,
+          content: m.content.substring(0, 300), // Limit message length
+        }));
     }
-    contextAwareMessages = [...contextAwareMessages, ...userMessages];
+    
+    // Check if adding conversation history would exceed token limits
+    const historyLength = userMessages.reduce((sum, msg) => sum + msg.content.length, 0);
+    if (totalContextLength + historyLength < maxContextTokens) {
+      contextAwareMessages = [...contextAwareMessages, ...userMessages];
+    }
 
-    // Send initial buffer chunk
+    // Send an improved initial message that sounds more natural
     const initialChunk = {
-      id: `chatcmpl-buffer-${Date.now()}`,
+      id: `chatcmpl-initial-${Date.now()}`,
       object: "chat.completion.chunk",
       created: Math.floor(Date.now() / 1000),
       model: aiModelId,
       choices: [
         {
-          delta: { content: "Let me think about that... " },
+          delta: { content: "I'm processing your request" },
           index: 0,
           finish_reason: null,
         },
@@ -663,11 +484,30 @@ exports.elevenLabsLLM = async (req, res) => {
     };
     res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
 
+    // Add a brief pause to simulate thinking
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Send a continuing message
+    const continuingChunk = {
+      id: `chatcmpl-continue-${Date.now()}`,
+      object: "chat.completion.chunk",
+      created: Math.floor(Date.now() / 1000),
+      model: aiModelId,
+      choices: [
+        {
+          delta: { content: "..." },
+          index: 0,
+          finish_reason: null,
+        },
+      ],
+    };
+    res.write(`data: ${JSON.stringify(continuingChunk)}\n\n`);
+
     // Generate AI response with streaming
     const stream = await openaiClient.chat.completions.create({
       model: model.apiConfig?.chatModel || "gpt-4o-mini",
       messages: contextAwareMessages,
-      max_tokens: model.apiConfig?.maxTokens || 1000,
+      max_tokens: model.apiConfig?.maxTokens || 500, // Reduced default tokens
       temperature: model.apiConfig?.temperature || 0.7,
       stream: true,
     });
@@ -718,15 +558,26 @@ exports.elevenLabsLLM = async (req, res) => {
     res.end();
   } catch (error) {
     console.error("elevenLabsLLM error:", error);
-    res.write(
-      `data: ${JSON.stringify({
-        error: {
-          message: "Internal error occurred!",
-          type: "server_error",
-          details: error.message,
+    
+    // Send a more user-friendly error message
+    const errorMessage = {
+      id: `chatcmpl-error-${Date.now()}`,
+      object: "chat.completion.chunk",
+      created: Math.floor(Date.now() / 1000),
+      model: aiModelId || "unknown",
+      choices: [
+        {
+          delta: { 
+            content: "I apologize, but I encountered an issue processing your request. Please try again." 
+          },
+          index: 0,
+          finish_reason: "stop",
         },
-      })}\n\n`
-    );
+      ],
+    };
+    
+    res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
+    res.write("data: [DONE]\n\n");
     res.end();
   }
 };
