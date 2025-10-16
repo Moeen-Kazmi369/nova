@@ -98,20 +98,26 @@ function HomePage() {
     }
   }, [models]);
 
+  // Filter conversations by selected model
+  const filteredConversations =
+    conversations?.filter(
+      (conversation) => conversation.aiModelId === selectedModel?._id
+    ) || [];
+
   useEffect(() => {
-    if (!conversations || conversations.length === 0) {
+    if (!filteredConversations || filteredConversations.length === 0) {
       setSelectedChatId(null);
       setChatMessages([]);
       return;
     }
 
     // if selectedChatId is missing or deleted, reset
-    const exists = conversations.some((c) => c._id === selectedChatId);
+    const exists = filteredConversations.some((c) => c._id === selectedChatId);
     if (!selectedChatId || !exists) {
-      setSelectedChatId(conversations[0]?._id || null);
+      setSelectedChatId(filteredConversations[0]?._id || null);
       setChatMessages([]); // clear old messages
     }
-  }, [conversations, selectedChatId]);
+  }, [filteredConversations, selectedChatId, selectedModel]);
 
   const handleSelectChat = (chatId) => {
     setSelectedChatId(chatId);
@@ -164,7 +170,9 @@ function HomePage() {
         toast.success("Chat deleted successfully");
         if (selectedChatId === chatId) {
           setSelectedChatId(
-            conversations?.length > 1 ? conversations[0]._id : null
+            filteredConversations?.length > 1
+              ? filteredConversations[0]._id
+              : null
           );
         }
       },
@@ -341,7 +349,7 @@ function HomePage() {
               </div>
               <ChatSidebar
                 models={models || []}
-                conversations={conversations || []}
+                conversations={filteredConversations || []}
                 selectedChatId={selectedChatId}
                 selectedModelId={selectedModel?._id}
                 onSelectChat={handleSelectChat}
@@ -360,7 +368,7 @@ function HomePage() {
           {isDesktop && (
             <ChatSidebar
               models={models || []}
-              conversations={conversations || []}
+              conversations={filteredConversations || []}
               selectedChatId={selectedChatId}
               selectedModelId={selectedModel?._id}
               onSelectChat={handleSelectChat}

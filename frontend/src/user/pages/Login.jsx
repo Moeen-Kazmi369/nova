@@ -3,11 +3,13 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import Icon from "../../assets/Icon.png";
 import { toast } from "sonner";
 import axios from "axios";
+import { Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,10 +26,13 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const { data } = await axios.post(`${import.meta.env.VITE_BACKEND_API_URI}/api/auth/login`, {
-        email,
-        password,
-      });
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_BACKEND_API_URI}/api/auth/login`,
+        {
+          email,
+          password,
+        }
+      );
       toast.success("Login successful");
 
       // Save token or user data to localStorage
@@ -52,15 +57,19 @@ const Login = () => {
           <div className="flex flex-col justify-center items-center mb-8">
             <img src={Icon} alt="logo" className="w-[130px] " />
             <h2 className="text-2xl font-bold text-center">
-              NOVA 1000<span className="text-sm align-top ml-1 text-gray-400">™</span>
-
+              NOVA 1000
+              <span className="text-sm align-top ml-1 text-gray-400">™</span>
             </h2>
             {/* <h2 className="text-2xl font-bold text-center">Nova</h2> */}
-            <p className="text-center">Please enter your credentials to sign in.</p>
+            <p className="text-center">
+              Please enter your credentials to sign in.
+            </p>
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-semi-bold mb-2 text-black">Email</label>
+            <label className="block text-sm font-semi-bold mb-2 text-black">
+              Email
+            </label>
             <input
               type="email"
               value={email}
@@ -70,14 +79,29 @@ const Login = () => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-semi-bold mb-2 text-black">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border rounded"
-              placeholder="Enter your password"
-            />
+            <label className="block text-sm font-semi-bold mb-2 text-black">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-2 border rounded pr-10"
+                placeholder="Enter your password"
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
           </div>
           <button
             type="submit"
@@ -87,7 +111,10 @@ const Login = () => {
           </button>
           <p className="mt-6 text-center text-sm text-black">
             Forgot password?{" "}
-            <Link to="/forgot-password" className="text-blue-500 hover:text-blue-700">
+            <Link
+              to="/forgot-password"
+              className="text-blue-500 hover:text-blue-700"
+            >
               Click here
             </Link>
           </p>

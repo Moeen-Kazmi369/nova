@@ -112,7 +112,6 @@ exports.userTextPrompt = async (req, res) => {
         });
         const queryEmbedding = embeddingResponse.data[0].embedding;
 
-      
         const { data, error } = await supabase.rpc("match_documents", {
           query_embedding: queryEmbedding,
           match_count: 5,
@@ -321,7 +320,7 @@ exports.elevenLabsLLM = async (req, res) => {
   const { elevenlabs_extra_body, messages } = request;
   const { aiModelId, conversationId, chatType, userId } =
     elevenlabs_extra_body || {};
-  console.log("elevenLabsLLM request:", JSON.stringify(elevenlabs_extra_body));  
+  console.log("elevenLabsLLM request:", JSON.stringify(elevenlabs_extra_body));
   // Map user_id to user if present
   const oaiRequest = { ...request };
   if (userId) {
@@ -403,18 +402,18 @@ exports.elevenLabsLLM = async (req, res) => {
     // Prepare messages with optimized RAG context
     const systemPrompt =
       model.apiConfig?.systemPrompt || "You are a helpful assistant.";
-    
+
     // Calculate approximate token count to avoid exceeding limits
     const maxContextTokens = (model.apiConfig?.maxTokens || 1000) * 3; // Rough estimation
     let contextAwareMessages = [{ role: "system", content: systemPrompt }];
-    
+
     let totalContextLength = systemPrompt.length;
 
     if (relatedChunks.length > 0) {
       const relevantContext = `Relevant context from documents:\n${relatedChunks.join(
         "\n\n"
       )}`;
-      
+
       // Check if adding this would exceed token limits
       if (totalContextLength + relevantContext.length < maxContextTokens) {
         contextAwareMessages.push({
@@ -427,7 +426,7 @@ exports.elevenLabsLLM = async (req, res) => {
 
     if (ragContext.trim()) {
       const additionalContext = `Additional document input:\n${ragContext}`;
-      
+
       // Check if adding this would exceed token limits
       if (totalContextLength + additionalContext.length < maxContextTokens) {
         contextAwareMessages.push({
@@ -461,47 +460,15 @@ exports.elevenLabsLLM = async (req, res) => {
           content: m.content.substring(0, 300), // Limit message length
         }));
     }
-    
+
     // Check if adding conversation history would exceed token limits
-    const historyLength = userMessages.reduce((sum, msg) => sum + msg.content.length, 0);
+    const historyLength = userMessages.reduce(
+      (sum, msg) => sum + msg.content.length,
+      0
+    );
     if (totalContextLength + historyLength < maxContextTokens) {
       contextAwareMessages = [...contextAwareMessages, ...userMessages];
     }
-
-    // Send an improved initial message that sounds more natural
-    const initialChunk = {
-      id: `chatcmpl-initial-${Date.now()}`,
-      object: "chat.completion.chunk",
-      created: Math.floor(Date.now() / 1000),
-      model: aiModelId,
-      choices: [
-        {
-          delta: { content: "I'm processing your request" },
-          index: 0,
-          finish_reason: null,
-        },
-      ],
-    };
-    res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
-
-    // Add a brief pause to simulate thinking
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // Send a continuing message
-    const continuingChunk = {
-      id: `chatcmpl-continue-${Date.now()}`,
-      object: "chat.completion.chunk",
-      created: Math.floor(Date.now() / 1000),
-      model: aiModelId,
-      choices: [
-        {
-          delta: { content: "..." },
-          index: 0,
-          finish_reason: null,
-        },
-      ],
-    };
-    res.write(`data: ${JSON.stringify(continuingChunk)}\n\n`);
 
     // Generate AI response with streaming
     const stream = await openaiClient.chat.completions.create({
@@ -518,7 +485,6 @@ exports.elevenLabsLLM = async (req, res) => {
       aiReply += content;
       res.write(`data: ${JSON.stringify(chunk)}\n\n`);
     }
-
     // Create or update conversation
     let conversation;
     if (!conversationId) {
@@ -558,7 +524,7 @@ exports.elevenLabsLLM = async (req, res) => {
     res.end();
   } catch (error) {
     console.error("elevenLabsLLM error:", error);
-    
+
     // Send a more user-friendly error message
     const errorMessage = {
       id: `chatcmpl-error-${Date.now()}`,
@@ -567,15 +533,16 @@ exports.elevenLabsLLM = async (req, res) => {
       model: aiModelId || "unknown",
       choices: [
         {
-          delta: { 
-            content: "I apologize, but I encountered an issue processing your request. Please try again." 
+          delta: {
+            content:
+              "I apologize, but I encountered an issue processing your request. Please try again.",
           },
           index: 0,
           finish_reason: "stop",
         },
       ],
     };
-    
+
     res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
     res.write("data: [DONE]\n\n");
     res.end();
