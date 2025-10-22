@@ -47,7 +47,9 @@ function HomePage() {
   const [isIOS, setIsIOS] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState("granted");
   const [chatMessages, setChatMessages] = useState([]);
+  const [localConversations, setLocalConversations] = useState([]);
   const messagesEndRef = useRef(null);
+  const isFirstLoadRef = useRef(true);
   const navigate = useNavigate();
 
   // Fetch data using hooks
@@ -69,55 +71,75 @@ function HomePage() {
   } = useGetConversationMessages(selectedChatId);
   const deleteConversation = useDeleteConversation();
   const userTextPrompt = useUserTextPrompt();
+
   useEffect(() => {
     setTimeout(() => {
       setIsLoading(false);
     }, 2000);
   }, []);
+
   useEffect(() => {
-    if (messages) {
-      setChatMessages(messages);
-    }
+    if (!messages) return;
+    setChatMessages((prev) => {
+      const prevLast = prev?.[prev.length - 1]?._id;
+      const nextLast = messages?.[messages.length - 1]?._id;
+      const sameLength = (prev?.length || 0) === (messages?.length || 0);
+      if (sameLength && prevLast === nextLast) return prev; // no state change
+      return messages;
+    });
+    isFirstLoadRef.current = true;
   }, [messages]);
+
+  useEffect(() => {
+    if (!models || models.length === 0) return;
+    const storedModelId = localStorage.getItem("selectedModelId");
+    const preferred = storedModelId ? models.find((m) => m._id === storedModelId) : null;
+    setSelectedModel((prev) => prev || preferred || models[0]);
+  }, [models]);
+
+
   // Update isDesktop on window resize
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Auto-scroll to bottom when messages change or processing
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      // Use setTimeout to ensure DOM has updated
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          // Use instant scroll for initial load, smooth for new messages
+          const behavior = isFirstLoadRef.current ? "auto" : "smooth";
+          messagesEndRef.current.scrollIntoView({ behavior });
+          isFirstLoadRef.current = false;
+        }
+      }, 100);
     }
-  }, [messages, isProcessing]);
-
-  // Set default model on load
-  useEffect(() => {
-    if (models && models.length > 0 && !selectedModel) {
-      setSelectedModel(models[0]);
-    }
-  }, [models]);
+  }, [chatMessages, isProcessing]);
+  const mergedConversations = [...(conversations || []), ...localConversations];
 
   // Filter conversations by selected model
   const filteredConversations =
-    conversations?.filter(
+    mergedConversations?.filter(
       (conversation) => conversation.aiModelId === selectedModel?._id
     ) || [];
 
   useEffect(() => {
     if (!filteredConversations || filteredConversations.length === 0) {
-      setSelectedChatId(null);
-      setChatMessages([]);
+      if (selectedChatId !== null) setSelectedChatId(null);
+      if (chatMessages.length) setChatMessages([]);
       return;
     }
 
-    // if selectedChatId is missing or deleted, reset
     const exists = filteredConversations.some((c) => c._id === selectedChatId);
     if (!selectedChatId || !exists) {
       setSelectedChatId(filteredConversations[0]?._id || null);
-      setChatMessages([]); // clear old messages
+      if (chatMessages.length) setChatMessages([]);
     }
-  }, [filteredConversations, selectedChatId, selectedModel]);
+  }, [filteredConversations, selectedChatId, chatMessages.length]);
 
   const handleSelectChat = (chatId) => {
     setSelectedChatId(chatId);
@@ -128,39 +150,26 @@ function HomePage() {
     if (!models) return;
     const model = models.find((m) => m._id === modelId);
     setSelectedModel(model);
+    localStorage.setItem('selectedModelId', modelId);
     setSelectedChatId(null); // Clear chat selection when switching models
     if (!isDesktop) setIsSidebarOpen(false);
   };
 
-  const handleCreateChat = async () => {
+  const handleCreateChat = () => {
     if (!selectedModel) {
       toast.error("Please select a model first");
       return;
     }
-    setIsCreatingNewChat(true);
-    try {
-      const promptData = new FormData();
-      promptData.append(
-        "prompt",
-        "AI You need to introduce yourself according to system prompt in 3 lines with greeting message"
-      );
-      promptData.append("aiModelId", selectedModel?._id);
-      promptData.append("chatType", "new");
-      const result = await userTextPrompt.mutateAsync(promptData);
-
-      // After creating the chat, refresh conversations and wait for completion
-      await refetchConversations();
-
-      // Now set the selected chat ID
-      setSelectedChatId(result.conversationId);
-
-      setIsCreatingNewChat(false);
-      if (!isDesktop) setIsSidebarOpen(false);
-      toast.success("New chat created");
-    } catch (err) {
-      toast.error(err.message || "Failed to create new chat");
-      setIsCreatingNewChat(false);
-    }
+    const newChat = {
+      _id: `local-${Date.now()}`,
+      aiModelId: selectedModel._id,
+      conversationName: "New Chat",
+    };
+    setLocalConversations((prev) => [newChat, ...prev]);
+    setSelectedChatId(newChat._id);
+    setChatMessages([]);
+    if (!isDesktop) setIsSidebarOpen(false);
+    toast.success("New chat created");
   };
 
   const handleDeleteChat = (chatId) => {
@@ -188,15 +197,13 @@ function HomePage() {
   const handleRenameChat = async (chatId, newTitle) => {
     try {
       await axios.put(
-        `${
-          import.meta.env.VITE_BACKEND_API_URI
+        `${import.meta.env.VITE_BACKEND_API_URI
         }/api/user/conversations/${chatId}`,
         { title: newTitle },
         {
           headers: {
-            Authorization: `Bearer ${
-              JSON.parse(localStorage.getItem("user"))?.token
-            }`,
+            Authorization: `Bearer ${JSON.parse(localStorage.getItem("user"))?.token
+              }`,
             "Content-Type": "application/json",
           },
         }
@@ -276,7 +283,7 @@ function HomePage() {
       selectedFiles.forEach((file) => {
         promptData.append("files", file);
       });
-      const { reply, conversationId } = await userTextPrompt.mutateAsync(
+      const { reply, conversationId, conversationName, wasLocal, previousLocalConversationId } = await userTextPrompt.mutateAsync(
         promptData,
         {
           onSettled: () => {
@@ -287,6 +294,16 @@ function HomePage() {
           },
         }
       );
+      if (wasLocal && previousLocalConversationId) {
+        try {
+          await refetchConversations();
+        } catch (error) {
+          console.error("Failed to refetch conversations:", error);
+        } finally {
+          setLocalConversations((prev) => prev.filter(c => c._id !== previousLocalConversationId));
+        }
+      }
+
       const aiMessage = {
         _id: `temp-${Date.now() + 1}`,
         attachments: [],
@@ -294,8 +311,13 @@ function HomePage() {
         text: reply,
         timestamp: new Date().toISOString(),
       };
+      setChatMessages((prev) => [...prev, aiMessage]);
       const finalChatId = conversationId || selectedChatId;
       setSelectedChatId(finalChatId);
+      if (conversationName && finalChatId === conversationId) {
+        // optional: ensure sidebar shows a meaningful title immediately if your UI reads from local state
+        // no-op here unless you're maintaining a local list item for this id
+      }
       setSelectedFiles([]);
     } catch (err) {
       setErrorMessage(err.message || "Failed to get response from AI");
@@ -391,8 +413,8 @@ function HomePage() {
                       isListening
                         ? audioLevel
                         : isSpeaking
-                        ? Math.random() * 0.8 + 0.2
-                        : 0
+                          ? Math.random() * 0.8 + 0.2
+                          : 0
                     }
                     size={isDesktop ? 165 : 130}
                     className="mx-auto"
@@ -427,7 +449,7 @@ function HomePage() {
                         attachments={message.attachments}
                         isUser={message.sender === "user"}
                         timestamp={new Date(message.timestamp)}
-                        setIsSpeaking={() => {}}
+                        setIsSpeaking={() => { }}
                       />
                     ))
                   )}
@@ -539,11 +561,10 @@ function HomePage() {
                           {[...Array(5)].map((_, i) => (
                             <div
                               key={i}
-                              className={`w-1 rounded-full animate-pulse ${
-                                isSpeaking
-                                  ? "bg-blue-500 h-2"
-                                  : "bg-emerald-500"
-                              }`}
+                              className={`w-1 rounded-full animate-pulse ${isSpeaking
+                                ? "bg-blue-500 h-2"
+                                : "bg-emerald-500"
+                                }`}
                               style={{
                                 animationDelay: `${i * 0.1}s`,
                                 height:
@@ -569,11 +590,9 @@ function HomePage() {
                         </a>
                       </div>
                     )}
-                    {selectedChatId && (
                       <button
                         type="button"
-                        className=""
-                        disabled={!selectedChatId}
+                      className=""
                         onClick={() =>
                           navigate(
                             `/voice?aiModelId=${selectedModel?._id}&aiModelIdFirstMessage=${selectedModel?.description}&conversationId=${selectedChatId}&aiModelName=${selectedModel?.name}`
@@ -584,15 +603,10 @@ function HomePage() {
                         <span className="sr-only">Start voice input</span>
                         <img
                           src={micIcone}
-                          className={`w-12 h-12 ${
-                            !selectedChatId
-                              ? "opacity-50 cursor-not-allowed"
-                              : ""
-                          }`}
+                        className={`w-12 h-12`}
                           alt="Microphone"
                         />
-                      </button>
-                    )}
+                    </button>
                   </div>
                 </div>
               </div>

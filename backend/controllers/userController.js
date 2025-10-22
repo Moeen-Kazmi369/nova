@@ -57,6 +57,8 @@ exports.userTextPrompt = async (req, res) => {
     const userId = req.user.id;
     try {
       const { conversationId, prompt, chatType, aiModelId } = req.body;
+      const isLocalConversation = conversationId && String(conversationId).startsWith("local-");
+      const effectiveConversationId = isLocalConversation ? null : conversationId;
 
       if (!prompt || !aiModelId) {
         return res
@@ -150,19 +152,20 @@ exports.userTextPrompt = async (req, res) => {
       messages.push({ role: "user", content: prompt });
       // Add conversation history (excluding system messages we just added)
       let userMessages = [];
-      if (conversationId) {
-        const conversation = await Conversation.findById(conversationId);
+      if (effectiveConversationId) {
+        const conversation = await Conversation.findById(effectiveConversationId);
         if (!conversation) {
           return res.status(404).json({ message: "Conversation not found" });
         }
         userMessages = conversation.messages
           .filter((m) => m.sender === "user" || m.sender === "ai")
-          .slice(-5) // Get the last 5 messages
+          .slice(-5)
           .map((m) => ({
             role: m.sender === "ai" ? "assistant" : "user",
             content: m.text,
           }));
       }
+
       messages = [...messages, ...userMessages];
       // Generate AI response
       const completion = await openaiClient.chat.completions.create({
@@ -178,7 +181,7 @@ exports.userTextPrompt = async (req, res) => {
       // Create or update conversation
       let conversation;
 
-      if (!conversationId) {
+      if (!effectiveConversationId) {
         const promptValue = chatType === "new" ? aiReply : prompt;
         // Generate conversation name from first user message
         const conversationName = await generateConversationName(
@@ -193,17 +196,17 @@ exports.userTextPrompt = async (req, res) => {
           messages: [
             ...(chatType !== "new"
               ? [
-                  {
-                    sender: "user",
-                    text: prompt,
-                    attachments:
-                      req.files?.map((f) => ({
-                        filename: f.originalname,
-                        mimetype: f.mimetype,
-                        size: f.size,
-                      })) || [],
-                  },
-                ]
+                {
+                  sender: "user",
+                  text: prompt,
+                  attachments:
+                    req.files?.map((f) => ({
+                      filename: f.originalname,
+                      mimetype: f.mimetype,
+                      size: f.size,
+                    })) || [],
+                },
+              ]
               : []),
             {
               sender: "ai",
@@ -213,7 +216,7 @@ exports.userTextPrompt = async (req, res) => {
           ],
         });
       } else {
-        conversation = await Conversation.findById(conversationId);
+        conversation = await Conversation.findById(effectiveConversationId);
         if (!conversation) {
           return res.status(404).json({ message: "Conversation not found" });
         }
@@ -241,6 +244,8 @@ exports.userTextPrompt = async (req, res) => {
         conversationId: conversation._id,
         reply: aiReply,
         conversationName: conversation.conversationName,
+        wasLocal: !!isLocalConversation,
+        previousLocalConversationId: isLocalConversation ? conversationId : null,
       });
     } catch (error) {
       console.error("userTextPrompt error:", error);
@@ -275,6 +280,9 @@ exports.getUserConversations = async (req, res) => {
 exports.getConversationMessagesById = async (req, res) => {
   try {
     const conversationId = req.params.id;
+    if (String(conversationId).startsWith("local-")) {
+      return res.json([]); // Local placeholder: no messages yet
+    }
     const conversation = await Conversation.findById(conversationId).select(
       "messages"
     );

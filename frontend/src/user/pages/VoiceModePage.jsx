@@ -42,6 +42,17 @@ const VoiceModePage = () => {
       await navigator.mediaDevices.getUserMedia({ audio: true });
       const userId = JSON.parse(localStorage.getItem("user") || "{}")?.userId;
       const chatType = conversationId && conversationId !== "null";
+      console.log(
+        {
+          conversationId:
+            conversationId && conversationId !== "null"
+              ? conversationId
+              : undefined,
+          aiModelId: aiModelId && aiModelId !== "null" ? aiModelId : undefined,
+          chatType: chatType ? "old" : "new",
+          userId: userId && userId !== "null" ? userId : undefined,
+        }
+      )
       await conversation.startSession({
         agentId: import.meta.env.VITE_ELEVEN_LAB_AGENT_ID,
         connectionType: "websocket",
