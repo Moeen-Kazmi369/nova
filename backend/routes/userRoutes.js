@@ -11,6 +11,9 @@ router.get("/models", userController.getAllAIModels);
 // Get all conversations for logged-in user (sidebar)
 router.get("/conversations", userController.getUserConversations);
 
+// Route to create a new conversation
+router.post("/conversations/new", userController.createNewConversation);
+
 // Get all messages for a conversation by ID
 router.get(
   "/conversations/:id/messages",

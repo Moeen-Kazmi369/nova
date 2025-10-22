@@ -9,7 +9,7 @@ import SettingsIcon from "../../assets/Settings.svg";
 import AboutIcon from "../../assets/About.svg";
 import WaveIcon from "../../assets/WaveIcon.png"; // 👈 New icon import
 
-export const MenuOverlay = ({ isOpen, onClose, voiceModeURL }) => {
+export const MenuOverlay = ({ isOpen, onClose, handleNavigateToVoiceMode }) => {
   const navigate = useNavigate();
   const overlayRef = useRef(null);
 
@@ -36,7 +36,7 @@ export const MenuOverlay = ({ isOpen, onClose, voiceModeURL }) => {
       title: "Voice Mode",
       description: "Pure voice interaction with NOVA 1000™",
       action: () => {
-        navigate(voiceModeURL);
+        handleNavigateToVoiceMode()
         onClose();
       },
       current: window.location.pathname === "/voice",

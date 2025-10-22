@@ -74,6 +74,12 @@ export function useDeleteConversation() {
   });
 }
 
+/** Create a new conversation */
+export const createNewConversation = async (aiModelId) => {
+  const { data } = await apiClient.post('/conversations/new', { aiModelId });
+  return data.conversationId;
+};
+
 /** User text prompt with optional files and conversation handling */
 export const userTextPrompt = async (promptData) => {
   // promptData can be FormData (with files) or JSON

@@ -322,6 +322,24 @@ exports.deleteConversationById = async (req, res) => {
   }
 };
 
+// Create a new conversation with "New Chat" name
+exports.createNewConversation = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const aiModelId = req.body.aiModelId;
+    const newConversation = await Conversation.create({
+      userId,
+      conversationName: "New Chat",
+      aiModelId,
+      messages: [],
+    });
+    return res.status(201).json({ conversationId: newConversation._id });
+  } catch (error) {
+    console.error("Error creating new conversation:", error);
+    return res.status(500).json({ message: "Failed to create new conversation" });
+  }
+};
+
 // Controller for ElevenLabs Custom LLM integration with streaming
 exports.elevenLabsLLM = async (req, res) => {
   const request = req.body;

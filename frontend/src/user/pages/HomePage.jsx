@@ -22,9 +22,11 @@ import {
   useGetConversationMessages,
   useDeleteConversation,
   useUserTextPrompt,
+  createNewConversation
 } from "../hooks/backendAPIService";
 import micIcone from "../../assets/micIcone.png";
 import { useNavigate } from "react-router-dom";
+
 function HomePage() {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -326,6 +328,23 @@ function HomePage() {
       );
     }
   };
+
+  const handleNavigateToVoiceMode = async () => {
+    let currentConversationId = selectedChatId;
+    if (!currentConversationId || currentConversationId.startsWith("local-")) {
+      try {
+        currentConversationId = await createNewConversation(selectedModel._id);
+      } catch (error) {
+        console.error("Failed to create new conversation:", error);
+        return;
+      }
+    }
+    navigate({
+      pathname: "/voice",
+      search: `?aiModelId=${selectedModel._id}&conversationId=${currentConversationId}`,
+    });
+  };
+
   if (isLoading) return <LoadingScreen />;
   return (
     <>
@@ -590,22 +609,17 @@ function HomePage() {
                         </a>
                       </div>
                     )}
-                      <button
-                        type="button"
-                      className=""
-                        onClick={() =>
-                          navigate(
-                            `/voice?aiModelId=${selectedModel?._id}&aiModelIdFirstMessage=${selectedModel?.description}&conversationId=${selectedChatId}&aiModelName=${selectedModel?.name}`
-                          )
-                        }
-                        title="Start voice input"
-                      >
-                        <span className="sr-only">Start voice input</span>
-                        <img
-                          src={micIcone}
+                    <button
+                      type="button"
+                      onClick={handleNavigateToVoiceMode}
+                      title="Start voice input"
+                    >
+                      <span className="sr-only">Start voice input</span>
+                      <img
+                        src={micIcone}
                         className={`w-12 h-12`}
-                          alt="Microphone"
-                        />
+                        alt="Microphone"
+                      />
                     </button>
                   </div>
                 </div>
@@ -618,7 +632,7 @@ function HomePage() {
         </div>
       </div>
       <MenuOverlay
-        voiceModeURL={`/voice?aiModelId=${selectedModel?._id}&aiModelIdFirstMessage=${selectedModel?.description}&conversationId=${selectedChatId}`}
+        handleNavigateToVoiceMode={handleNavigateToVoiceMode}
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
       />
