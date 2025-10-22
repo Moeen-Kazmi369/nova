@@ -355,14 +355,15 @@ exports.elevenLabsLLM = async (req, res) => {
   }
 
   // Validate inputs
-  if (!aiModelId || !messages || !Array.isArray(messages)) {
+  if (!aiModelId || !messages || !Array.isArray(messages) || !conversationId) {
     return res.status(400).json({
       error: {
-        message: "model and messages are required",
+        message: "aiModelId, messages, and conversationId are required",
         type: "invalid_request_error",
       },
     });
   }
+
 
   // Get the last user message
   const lastUserMessage = messages.findLast((m) => m.role === "user");
@@ -376,6 +377,15 @@ exports.elevenLabsLLM = async (req, res) => {
   }
 
   const prompt = lastUserMessage.content;
+  // Fetch the target conversation (must exist)
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) {
+    return res.status(404).json({
+      error: { message: "Conversation not found", type: "invalid_request_error" },
+    });
+  }
+  const wasEmptyBefore = (conversation.messages?.length || 0) === 0;
+
 
   // Set headers for streaming response
   res.setHeader("Content-Type", "text/event-stream");
@@ -464,28 +474,14 @@ exports.elevenLabsLLM = async (req, res) => {
     }
 
     // Add conversation history (limited to save tokens)
-    let userMessages = [];
-    if (conversationId) {
-      const conversation = await Conversation.findById(conversationId);
-      if (!conversation) {
-        throw new Error("Conversation not found");
-      }
-      userMessages = conversation.messages
-        .filter((m) => m.sender === "user" || m.sender === "ai")
-        .slice(-3) // Reduced from 5 to 3 to save tokens
-        .map((m) => ({
-          role: m.sender === "ai" ? "assistant" : m.sender,
-          content: m.text.substring(0, 300), // Limit message length
-        }));
-    } else {
-      userMessages = messages
-        .filter((m) => m.role === "user" || m.role === "assistant")
-        .slice(-3) // Reduced from 5 to 3 to save tokens
-        .map((m) => ({
-          role: m.role,
-          content: m.content.substring(0, 300), // Limit message length
-        }));
-    }
+    let userMessages = conversation.messages
+      .filter((m) => m.sender === "user" || m.sender === "ai")
+      .slice(-3)
+      .map((m) => ({
+        role: m.sender === "ai" ? "assistant" : "user",
+        content: m.text.substring(0, 300),
+      }));
+
 
     // Check if adding conversation history would exceed token limits
     const historyLength = userMessages.reduce(
@@ -511,39 +507,27 @@ exports.elevenLabsLLM = async (req, res) => {
       aiReply += content;
       res.write(`data: ${JSON.stringify(chunk)}\n\n`);
     }
-    // Create or update conversation
-    let conversation;
-    if (!conversationId) {
-      const promptValue = chatType === "new" ? aiReply : prompt;
-      const conversationName = await generateConversationName(
-        openaiClient,
-        promptValue
-      );
-
-      conversation = new Conversation({
-        userId,
-        aiModelId,
-        conversationName,
-        messages: [
-          ...(chatType !== "new"
-            ? [{ sender: "user", text: prompt, attachments: [] }]
-            : []),
-          { sender: "ai", text: aiReply, attachments: [] },
-        ],
-      });
-    } else {
-      conversation = await Conversation.findById(conversationId);
-      if (!conversation) {
-        throw new Error("Conversation not found");
+    // Update conversation (conversationId is mandatory here)
+    if (wasEmptyBefore) {
+      // First message in this conversation: generate a meaningful name from the user's prompt
+      try {
+        const conversationName = await generateConversationName(openaiClient, prompt);
+        if (conversationName) {
+          conversation.conversationName = conversationName;
+        }
+      } catch (e) {
+        console.warn("Failed to generate conversation name:", e?.message);
       }
-      conversation.messages.push(
-        { sender: "user", text: prompt, attachments: [] },
-        { sender: "ai", text: aiReply, attachments: [] }
-      );
     }
+
+    conversation.messages.push(
+      { sender: "user", text: prompt, attachments: [] },
+      { sender: "ai", text: aiReply, attachments: [] }
+    );
 
     conversation.updatedAt = new Date();
     await conversation.save();
+
 
     // Signal end of stream
     res.write("data: [DONE]\n\n");
