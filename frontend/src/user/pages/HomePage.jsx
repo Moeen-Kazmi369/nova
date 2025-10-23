@@ -432,8 +432,8 @@ function HomePage() {
                       isListening
                         ? audioLevel
                         : isSpeaking
-                          ? Math.random() * 0.8 + 0.2
-                          : 0
+                        ? Math.random() * 0.8 + 0.2
+                        : 0
                     }
                     size={isDesktop ? 165 : 130}
                     className="mx-auto"
@@ -468,7 +468,7 @@ function HomePage() {
                         attachments={message.attachments}
                         isUser={message.sender === "user"}
                         timestamp={new Date(message.timestamp)}
-                        setIsSpeaking={() => { }}
+                        setIsSpeaking={setIsSpeaking}
                       />
                     ))
                   )}
@@ -580,10 +580,11 @@ function HomePage() {
                           {[...Array(5)].map((_, i) => (
                             <div
                               key={i}
-                              className={`w-1 rounded-full animate-pulse ${isSpeaking
-                                ? "bg-blue-500 h-2"
-                                : "bg-emerald-500"
-                                }`}
+                              className={`w-1 rounded-full animate-pulse ${
+                                isSpeaking
+                                  ? "bg-blue-500 h-2"
+                                  : "bg-emerald-500"
+                              }`}
                               style={{
                                 animationDelay: `${i * 0.1}s`,
                                 height:
