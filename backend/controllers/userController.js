@@ -371,9 +371,11 @@ exports.elevenLabsLLM = async (req, res) => {
     });
   }
 
+  // Find last user message (Node compat)
   const lastUserMessage =
     messages.findLast?.((m) => m.role === "user") ||
-    [...messages].reverse().find((m) => m.role === "user"); // Node compat
+    [...messages].reverse().find((m) => m.role === "user");
+
   if (!lastUserMessage) {
     return res
       .status(400)
@@ -399,11 +401,20 @@ exports.elevenLabsLLM = async (req, res) => {
   }
   const wasEmptyBefore = (conversation.messages?.length || 0) === 0;
 
-  // SSE headers
+  // SSE headers (same as before)
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no");
+  // Optional: CORS if needed by your EL agent
+  // res.setHeader("Access-Control-Allow-Origin", "*");
+
+  // keep-alive heartbeat (every 15s)
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(`: ping\n\n`);
+    } catch {}
+  }, 15000);
 
   try {
     const model = await AIModel.findById(aiModelId);
@@ -414,13 +425,7 @@ exports.elevenLabsLLM = async (req, res) => {
     if (!openaiApiKey) throw new Error("OpenAI API key not configured");
     const openaiClient = new openai.OpenAI({ apiKey: openaiApiKey });
 
-    // (Optional) small extra user-provided text (but don't rely on Mongo text for inference)
-    let ragContext = "";
-    if (model.fullTextContent) {
-      ragContext = model.fullTextContent.slice(0, 1200);
-    }
-
-    // ✅ Always try retrieval from Supabase; pass p_ai_model_id
+    // -------- RAG retrieval (always try; filter per-model) --------
     let relatedChunks = [];
     try {
       const emb = await openaiClient.embeddings.create({
@@ -432,7 +437,7 @@ exports.elevenLabsLLM = async (req, res) => {
       const { data, error } = await supabase.rpc("match_documents", {
         query_embedding: queryEmbedding,
         p_ai_model_id: model._id.toString(),
-        match_count: 3, // lean for streaming
+        match_count: 3,
       });
 
       if (!error && data?.length) {
@@ -442,11 +447,14 @@ exports.elevenLabsLLM = async (req, res) => {
       console.error("RAG (elevenLabsLLM) retrieval error:", e);
     }
 
-    // Build a compact context to save tokens
+    // Optional: tiny extra notes (don’t rely on Mongo body for inference)
+    const ragContext = (model.fullTextContent || "").slice(0, 1200);
+
     const systemPrompt =
       model.apiConfig?.systemPrompt ||
       "You are a careful assistant. Use the provided CONTEXT; if insufficient, say so.";
 
+    // Build messages: system → context → history → user
     const msgs = [{ role: "system", content: systemPrompt }];
 
     if (relatedChunks.length) {
@@ -467,7 +475,6 @@ exports.elevenLabsLLM = async (req, res) => {
       });
     }
 
-    // recent history (compact)
     const hist = conversation.messages
       .filter((m) => m.sender === "user" || m.sender === "ai")
       .slice(-3)
@@ -477,10 +484,9 @@ exports.elevenLabsLLM = async (req, res) => {
       }));
     msgs.push(...hist);
 
-    // new user turn last
     msgs.push({ role: "user", content: prompt });
 
-    // Stream
+    // -------- Stream from OpenAI --------
     const stream = await openaiClient.chat.completions.create({
       model: model.apiConfig?.chatModel || "gpt-4o-mini",
       messages: msgs,
@@ -491,15 +497,20 @@ exports.elevenLabsLLM = async (req, res) => {
 
     let aiReply = "";
     for await (const chunk of stream) {
+      // ✅ Key change: send the *raw OpenAI chunk object* (like your old controller)
+      // Many voice agents (incl. ElevenLabs) expect this exact structure.
       const piece = chunk.choices?.[0]?.delta?.content || "";
-      if (piece) {
-        aiReply += piece;
-        // send only text deltas to client (lighter than the full chunk)
-        res.write(`data: ${JSON.stringify({ delta: piece })}\n\n`);
+      if (piece) aiReply += piece;
+
+      try {
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      } catch (e) {
+        console.error("SSE write error:", e?.message);
+        break;
       }
     }
 
-    // name conversation if first turn
+    // Name conversation if first turn
     if (wasEmptyBefore) {
       try {
         const conversationName = await generateConversationName(
@@ -520,9 +531,12 @@ exports.elevenLabsLLM = async (req, res) => {
     await conversation.save();
 
     res.write("data: [DONE]\n\n");
+    clearInterval(heartbeat);
     res.end();
   } catch (error) {
     console.error("elevenLabsLLM error:", error);
+
+    // Keep the same error payload shape your agent is used to
     const errorMessage = {
       id: `chatcmpl-error-${Date.now()}`,
       object: "chat.completion.chunk",
@@ -536,8 +550,12 @@ exports.elevenLabsLLM = async (req, res) => {
         },
       ],
     };
-    res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
-    res.write("data: [DONE]\n\n");
+
+    try {
+      res.write(`data: ${JSON.stringify(errorMessage)}\n\n`);
+      res.write("data: [DONE]\n\n");
+    } catch {}
+    clearInterval(heartbeat);
     res.end();
   }
 };
