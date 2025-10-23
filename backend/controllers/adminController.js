@@ -21,6 +21,8 @@ const upload = multer({
   },
 }).array("files", 3);
 
+const EMBEDDING_MODEL = "text-embedding-3-small"; // 1536-dim
+
 exports.createAIModel = async (req, res) => {
   upload(req, res, async (err) => {
     if (err) return res.status(400).json({ message: err.message });
@@ -64,30 +66,27 @@ exports.createAIModel = async (req, res) => {
 
       // Now chunk the fullTextContent and store chunks with embeddings
       if (fullTextContent) {
-        const chunks = chunkText(fullTextContent); // Utility to split into smaller chunks
+        const chunks = chunkText(fullTextContent);
 
-        for (const chunk of chunks) {
-          // Create embedding with OpenAI
-          const embeddingResponse = await openaiClient.embeddings.create({
-            model: "text-embedding-3-large", // replace with your embedding model
-            input: chunk,
-          });
-          const embedding = embeddingResponse.data[0].embedding;
+        // batch request (cheaper/faster than 1-by-1)
+        const embRes = await openaiClient.embeddings.create({
+          model: EMBEDDING_MODEL,
+          input: chunks, // array of strings
+        });
 
-          try {
-            // Save chunk + embedding to Supabase vector table:
-            const res = await supabase
-              .from("documents") // your vector DB table name
-              .insert({
-                content: chunk,
-                embedding,
-                metadata: { aiModelId: newModel._id.toString(), filename: "" },
-              });
-            console.log(res);
-          } catch (error) {
-            console.log(error);
-          }
-        }
+        const rows = chunks.map((chunk, i) => ({
+          ai_model_id: newModel._id.toString(),
+          content: chunk,
+          embedding: embRes.data[i].embedding,
+          metadata: {
+            filename: null,
+            chunk_index: i,
+            created_at: new Date().toISOString(),
+          },
+        }));
+
+        const { error } = await supabase.from("documents").insert(rows);
+        if (error) console.error("Supabase insert error:", error);
       }
 
       res.status(201).json(newModel);
@@ -146,25 +145,28 @@ exports.updateAIModel = async (req, res) => {
 
         // Delete existing vectors for this model's RAG table before inserting updated chunks
         await supabase
-          .from(model.ragTableName || "documents")
+          .from("documents")
           .delete()
-          .eq("metadata->>aiModelId", model._id.toString());
+          .eq("ai_model_id", model._id.toString());
 
-        for (const chunk of chunks) {
-          // Generate embedding using OpenAI embeddings API
-          const embeddingResponse = await openaiClient.embeddings.create({
-            model: "text-embedding-3-large",
-            input: chunk,
-          });
-          const embedding = embeddingResponse.data[0].embedding;
+        // batch request (cheaper/faster than 1-by-1)
+        const embRes = await openaiClient.embeddings.create({
+          model: EMBEDDING_MODEL,
+          input: chunks, // array of strings
+        });
+        const rows = chunks.map((chunk, i) => ({
+          ai_model_id: newModel._id.toString(),
+          content: chunk,
+          embedding: embRes.data[i].embedding,
+          metadata: {
+            filename: null,
+            chunk_index: i,
+            created_at: new Date().toISOString(),
+          },
+        }));
 
-          // Insert the chunk + embedding into Supabase vector DB
-          await supabase.from("documents").insert({
-            content: chunk,
-            embedding,
-            metadata: { aiModelId: model._id.toString(), filename: "" },
-          });
-        }
+        const { error } = await supabase.from("documents").insert(rows);
+        if (error) console.error("Supabase insert error:", error);
       }
 
       res.json(model);
@@ -188,7 +190,7 @@ exports.deleteAIModel = async (req, res) => {
     const { error } = await supabase
       .from("documents")
       .delete()
-      .eq("metadata->>aiModelId", model._id.toString());
+      .eq("ai_model_id", model._id.toString());
 
     if (error) {
       console.error("Supabase delete error:", error);
@@ -262,103 +264,100 @@ exports.adminPlaygroundTextChat = async (req, res) => {
 
     try {
       const { prompt, modelId } = req.body;
-      if (!prompt || !modelId)
+      if (!prompt || !modelId) {
         return res
           .status(400)
           .json({ message: "Prompt and modelId are required" });
+      }
 
-      // Fetch AI Model details
       const model = await AIModel.findById(modelId);
       if (!model)
         return res.status(404).json({ message: "AI Model not found" });
 
-      // Use OpenAI client with model apiKey or default from backend env
       const openaiApiKey =
         model.apiConfig?.apiKey || process.env.OPENAI_API_KEY;
       if (!openaiApiKey)
         return res
           .status(400)
           .json({ message: "OpenAI API key not configured" });
-
       const openaiClient = new openai.OpenAI({ apiKey: openaiApiKey });
 
-      // Placeholder for additional prompt context (from files or uploaded files)
+      // 1) Optional ad-hoc context from uploads
       let ragContext = "";
-
-      // Process uploaded files if any, extract text or image descriptions and append
-      if (req.files && req.files.length > 0) {
+      if (req.files?.length) {
         for (const file of req.files) {
           let content = "";
-          if (file.mimetype === "application/pdf") {
+          if (file.mimetype === "application/pdf")
             content = await parsePDF(file.buffer);
-          } else if (
+          else if (
             ["text/plain", "text/csv", "application/json"].includes(
               file.mimetype
             )
-          ) {
+          )
             content = await parseTxtCsvJson(file.buffer);
-          } else if (
+          else if (
             ["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)
-          ) {
+          )
             content = await getImageDescription(openaiClient, file.buffer);
-          }
           ragContext += "\n" + content;
         }
       }
 
-      // If model has RAG contents stored on MongoDB side, use them
-      if (model.fullTextContent) {
-        ragContext += "\n" + model.fullTextContent;
-      }
-
-      // If ragContext exists, perform semantic search in Supabase vector DB to get relevant text chunks
+      // 2) Always try retrieval from Supabase (don’t gate on Mongo text)
       let relatedChunks = [];
-      if (model.files.length > 0 && model.fullTextContent) {
-        const embeddingResponse = await openaiClient.embeddings.create({
-          model: "text-embedding-3-large",
+      try {
+        const emb = await openaiClient.embeddings.create({
+          model: EMBEDDING_MODEL,
           input: prompt,
         });
-        const queryEmbedding = embeddingResponse.data[0].embedding;
+        const queryEmbedding = emb.data[0].embedding;
 
         const { data, error } = await supabase.rpc("match_documents", {
           query_embedding: queryEmbedding,
+          p_ai_model_id: model._id.toString(),
           match_count: 5,
         });
-
-        if (error) {
-          console.error("Supabase RAG query error:", error);
-        } else {
-          relatedChunks = data.map((item) => item.content);
+        if (!error && data?.length) {
+          // Optionally trim each chunk to keep tokens low
+          relatedChunks = data.map((x) => x.content.substring(0, 800));
         }
+      } catch (e) {
+        console.error("Playground RAG retrieval error:", e);
       }
 
-      // Assemble system prompt and user messages for OpenAI chat completion
+      // 3) Build messages: system → context blocks → (optional) history → user
       const systemPrompt =
-        model.apiConfig?.systemPrompt || "You are a helpful assistant.";
-      const temperature = model.apiConfig?.temperature || 0.7;
-      const maxTokens = model.apiConfig?.maxTokens || 1000;
+        model.apiConfig?.systemPrompt ||
+        "You are a careful assistant. Use the CONTEXT if relevant; if not, say you don't know.";
+      const temperature = model.apiConfig?.temperature ?? 0.2;
+      const maxTokens = model.apiConfig?.maxTokens ?? 1000;
 
-      let messages = [{ role: "system", content: systemPrompt }];
+      const messages = [{ role: "system", content: systemPrompt }];
 
-      if (relatedChunks.length > 0) {
+      if (relatedChunks.length) {
         messages.push({
-          role: "system",
-          content: `Relevant context from documents:\n${relatedChunks.join(
-            "\n\n"
-          )}`,
+          role: "assistant",
+          content: [
+            "CONTEXT (top matches from knowledge base):",
+            "----",
+            ...relatedChunks.map((c, i) => `[${i + 1}] ${c}`),
+            "----",
+            "If a part of the user's question is not covered above, say so.",
+          ].join("\n"),
         });
       }
 
       if (ragContext.trim()) {
         messages.push({
-          role: "system",
-          content: `Additional document input:\n${ragContext}`,
+          role: "assistant",
+          content: `ADDITIONAL USER DOCUMENTS:\n----\n${ragContext}\n----`,
         });
       }
 
+      // (Optional) include a bit of synthetic history here if you have it (not shown)
+
       messages.push({ role: "user", content: prompt });
 
-      // Generate response from OpenAI chat completion
       const completion = await openaiClient.chat.completions.create({
         model: model.apiConfig?.chatModel || "gpt-4o-mini",
         messages,
@@ -368,7 +367,6 @@ exports.adminPlaygroundTextChat = async (req, res) => {
 
       const reply =
         completion.choices[0].message?.content || "No response generated";
-
       res.json({ reply });
     } catch (err) {
       console.error("adminPlaygroundTextChat error:", err);
@@ -378,3 +376,4 @@ exports.adminPlaygroundTextChat = async (req, res) => {
     }
   });
 };
+

@@ -21,6 +21,40 @@ import {
   useAdminPlaygroundTextChat,
 } from "../hooks/backendAPIService";
 
+// imports (add these at the top)
+import { Info, ChevronDown } from "lucide-react";
+
+// Reusable helper
+function InfoNote({ title, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className="ml-2 inline-flex items-center text-slate-300 hover:text-white"
+        aria-expanded={open}
+        aria-label={`More info about ${title}`}
+      >
+        <Info className="w-4 h-4" />
+        <ChevronDown className={`w-3 h-3 ml-1 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div
+          className="absolute z-10 mt-2 w-80 max-w-[80vw] rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm shadow-xl"
+          role="region"
+          aria-label={title}
+        >
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const initialConfig = {
   name: "",
   description: "",
@@ -246,29 +280,104 @@ console.log(messages);
             />
           </label>
           <label className="block">
-            <span className="block mb-1 font-medium">Description</span>
+            <span className="block mb-1 font-medium">
+              Description
+              <InfoNote title="Description / Greeting">
+                <div className="space-y-2">
+                  <p>
+                    <strong>What it is:</strong> A short summary users see with
+                    the model. You can also treat it as the model’s{" "}
+                    <em>initial greeting</em>.
+                  </p>
+                  <p>
+                    <strong>Tip:</strong> Keep it 1–2 sentences. Example: “Hi!
+                    I’m the ParkBlockX assistant—ask me about AI pricing, IoT
+                    detection, and the NOVA Fund.”
+                  </p>
+                  <p className="text-slate-400">
+                    This does <em>not</em> affect model behavior—use{" "}
+                    <strong>Instructions</strong> for that.
+                  </p>
+                </div>
+              </InfoNote>
+            </span>
             <textarea
               name="description"
               value={config.description}
               onChange={handleChange}
               className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
               rows={3}
-              placeholder="Describe your AI model..."
+              placeholder="This model greets users and explains ParkBlockX features…"
             />
           </label>
+
           <label className="block">
-            <span className="block mb-1 font-medium">Instructions</span>
+            <span className="block mb-1 font-medium">
+              Instructions
+              <InfoNote title="Instructions / System Prompt">
+                <div className="space-y-2">
+                  <p>
+                    <strong>What it does:</strong> Defines the model’s{" "}
+                    <em>personality, goals, and boundaries</em>. It’s sent as
+                    the system prompt at the start of every chat.
+                  </p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>Use clear, direct language—avoid long essays.</li>
+                    <li>
+                      Tell the model how to behave (e.g., “You are ParkBlockX
+                      Assistant. Be concise, accurate, and cite data.”)
+                    </li>
+                    <li>
+                      Include limits: “If information isn’t in context, say you
+                      don’t know.”
+                    </li>
+                  </ul>
+                  <p className="text-slate-400">
+                    <strong>Tip:</strong> This prompt directly shapes every
+                    answer. Keep it short (under ~200 words) and task-focused.
+                  </p>
+                </div>
+              </InfoNote>
+            </span>
+
             <textarea
               name="apiConfig.systemPrompt"
               value={config.apiConfig.systemPrompt}
               onChange={handleChange}
               className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
               rows={3}
-              placeholder="You are a helpful assistant..."
+              placeholder="You are ParkBlockX Assistant. Use provided context to answer questions accurately and concisely..."
             />
           </label>
+
           <label className="block">
-            <span className="block mb-1 font-medium">Temperature</span>
+            <span className="block mb-1 font-medium">
+              Temperature
+              <InfoNote title="Temperature">
+                <div className="space-y-2">
+                  <p>
+                    <strong>What it does:</strong> Controls
+                    randomness/creativity.
+                  </p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>
+                      <strong>0.0–0.3</strong>: concise, deterministic (best for
+                      docs/RAG)
+                    </li>
+                    <li>
+                      <strong>0.4–0.7</strong>: balanced, a bit more variety
+                    </li>
+                    <li>
+                      <strong>0.8–1.0</strong>: creative/expansive (risk of
+                      drift)
+                    </li>
+                  </ul>
+                  <p className="text-slate-400">
+                    For your use case, try <strong>0.2–0.3</strong>.
+                  </p>
+                </div>
+              </InfoNote>
+            </span>
             <input
               type="number"
               name="apiConfig.temperature"
@@ -280,8 +389,33 @@ console.log(messages);
               className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
             />
           </label>
+
           <label className="block">
-            <span className="block mb-1 font-medium">Max Tokens</span>
+            <span className="block mb-1 font-medium">
+              Max Tokens
+              <InfoNote title="Max Tokens">
+                <div className="space-y-2">
+                  <p>
+                    <strong>What it does:</strong> Upper bound on the reply
+                    length (in tokens).
+                  </p>
+                  <ul className="list-disc ml-5 space-y-1">
+                    <li>
+                      <strong>~150–300</strong>: short, to-the-point answers
+                    </li>
+                    <li>
+                      <strong>~400–600</strong>: balanced detail
+                    </li>
+                    <li>
+                      <strong>800+ </strong>: long/verbose responses
+                    </li>
+                  </ul>
+                  <p className="text-slate-400">
+                    For concise RAG replies, start at <strong>300</strong>.
+                  </p>
+                </div>
+              </InfoNote>
+            </span>
             <input
               type="number"
               name="apiConfig.maxTokens"
@@ -292,6 +426,7 @@ console.log(messages);
               className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
             />
           </label>
+
           <label className="block">
             <span className="block mb-1 font-medium">Recommended Model</span>
             <select
@@ -318,9 +453,7 @@ console.log(messages);
             />
           </label>
           <label className="block">
-            <span className="block mb-1 font-medium">
-              Knowledge
-            </span>
+            <span className="block mb-1 font-medium">Knowledge</span>
             <input
               type="file"
               accept=".pdf,.txt,.csv,.json"
