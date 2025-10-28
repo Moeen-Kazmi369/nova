@@ -132,7 +132,7 @@ const VoiceModePage = () => {
           <div className="mb-4 mt-[-20px]">
             <CircularWaveform
               isActive={isListening || isSpeaking || false}
-              isUserInput={isListening || micOn}
+              isUserInput={isListening}
               audioLevel={Math.random() * 0.8 + 0.2}
               size={isDesktop ? 250 : 150}
               className="mx-auto"

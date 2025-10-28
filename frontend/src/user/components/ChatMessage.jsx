@@ -1,6 +1,9 @@
 import React from "react";
 import { useState, useRef } from "react";
 import axios from "axios";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 import { FileIcon, FileText, ImageIcon, Volume2, VolumeX } from "lucide-react"; // Speaker icons
 
 export const ChatMessage = ({
@@ -44,9 +47,89 @@ export const ChatMessage = ({
             ))}
           </div>
         )}
-        <p className="text-sm leading-relaxed break-words text-white">
+        {/* <p className="text-sm leading-relaxed break-words text-white">
           {message}
-        </p>
+        </p> */}
+        {/* Markdown renderer */}
+        <div className="text-sm leading-relaxed break-words text-white prose prose-invert prose-pre:rounded-xl prose-pre:bg-slate-900/70 max-w-none">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight]}
+            // You can customize HTML tags if you want tighter control:
+            components={{
+              a: (props) => (
+                <a
+                  {...props}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                />
+              ),
+              code: ({ inline, className, children, ...props }) => {
+                // Keep inline code small and blocks in <pre><code>
+                if (inline) {
+                  return (
+                    <code
+                      className={`px-1 py-0.5 rounded bg-slate-900/60 ${
+                        className || ""
+                      }`}
+                      {...props}
+                    >
+                      {children}
+                    </code>
+                  );
+                }
+                return (
+                  <pre className="p-3 rounded-xl overflow-x-auto">
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  </pre>
+                );
+              },
+              table: (props) => (
+                <div className="overflow-x-auto">
+                  <table
+                    className="min-w-full border-separate border-spacing-0"
+                    {...props}
+                  />
+                </div>
+              ),
+              th: (props) => (
+                <th
+                  className="border-b border-slate-700 px-3 py-2 text-left"
+                  {...props}
+                />
+              ),
+              td: (props) => (
+                <td
+                  className="border-b border-slate-800 px-3 py-2"
+                  {...props}
+                />
+              ),
+              h1: (props) => (
+                <h1 className="text-xl font-bold mt-2 mb-1" {...props} />
+              ),
+              h2: (props) => (
+                <h2 className="text-lg font-semibold mt-2 mb-1" {...props} />
+              ),
+              ul: (props) => (
+                <ul className="list-disc pl-5 space-y-1" {...props} />
+              ),
+              ol: (props) => (
+                <ol className="list-decimal pl-5 space-y-1" {...props} />
+              ),
+              blockquote: (props) => (
+                <blockquote
+                  className="border-l-4 border-slate-600 pl-3 italic opacity-90"
+                  {...props}
+                />
+              ),
+            }}
+          >
+            {message || ""}
+          </ReactMarkdown>
+        </div>
         {timestamp && (
           <div className="mt-2 flex items-center justify-between">
             <p className="text-xs text-gray-400">

@@ -131,8 +131,15 @@ exports.userTextPrompt = async (req, res) => {
         console.error("RAG retrieval failed:", e);
       }
       // Prepare messages for OpenAI chat
-      const systemPrompt =
-        model.apiConfig?.systemPrompt || "You are a helpful assistant.";
+      const systemPrompt = `
+Always write responses in **GitHub-flavored Markdown**:
+- Use headings, bullet lists, and numbered steps when helpful.
+- For code, use fenced blocks with language hints, e.g. \`\`\`js, \`\`\`ts, \`\`\`bash.
+- Prefer concise sections with clear formatting.
+
+${model.apiConfig?.systemPrompt || "You are a helpful assistant."}
+`;
+
       const temperature = model.apiConfig?.temperature || 0.2;
       const maxTokens = model.apiConfig?.maxTokens || 1000;
 
@@ -377,27 +384,23 @@ exports.elevenLabsLLM = async (req, res) => {
     [...messages].reverse().find((m) => m.role === "user");
 
   if (!lastUserMessage) {
-    return res
-      .status(400)
-      .json({
-        error: {
-          message: "No user message found",
-          type: "invalid_request_error",
-        },
-      });
+    return res.status(400).json({
+      error: {
+        message: "No user message found",
+        type: "invalid_request_error",
+      },
+    });
   }
   const prompt = lastUserMessage.content;
 
   const conversation = await Conversation.findById(conversationId);
   if (!conversation) {
-    return res
-      .status(404)
-      .json({
-        error: {
-          message: "Conversation not found",
-          type: "invalid_request_error",
-        },
-      });
+    return res.status(404).json({
+      error: {
+        message: "Conversation not found",
+        type: "invalid_request_error",
+      },
+    });
   }
   const wasEmptyBefore = (conversation.messages?.length || 0) === 0;
 
@@ -559,4 +562,3 @@ exports.elevenLabsLLM = async (req, res) => {
     res.end();
   }
 };
-
