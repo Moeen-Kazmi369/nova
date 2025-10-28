@@ -67,24 +67,50 @@ exports.createAIModel = async (req, res) => {
       // Now chunk the fullTextContent and store chunks with embeddings
       if (fullTextContent) {
         const chunks = chunkText(fullTextContent);
+        console.log("chunks length:", chunks.length);
+        console.log(
+          "first item type/len:",
+          typeof chunks[0],
+          chunks[0]?.length
+        );
 
-        // batch request (cheaper/faster than 1-by-1)
-        const embRes = await openaiClient.embeddings.create({
-          model: EMBEDDING_MODEL,
-          input: chunks, // array of strings
-        });
+        // after you compute `chunks = chunkText(fullTextContent)`
+        const cleanChunks = (chunks || [])
+          .map((c) => (typeof c === "string" ? c : String(c ?? "")))
+          .map((c) => c.trim())
+          .filter((c) => c.length > 0);
 
-        const rows = chunks.map((chunk, i) => ({
-          ai_model_id: newModel._id.toString(),
-          content: chunk,
-          embedding: embRes.data[i].embedding,
-          metadata: {
-            filename: null,
-            chunk_index: i,
-            created_at: new Date().toISOString(),
-          },
-        }));
+        // BATCH to avoid oversized request errors
+        const BATCH_SIZE = 100; // 64–128 is also fine
+        const rows = [];
 
+        for (let i = 0; i < cleanChunks.length; i += BATCH_SIZE) {
+          const batch = cleanChunks.slice(i, i + BATCH_SIZE);
+
+          const embRes = await openaiClient.embeddings.create({
+            model: EMBEDDING_MODEL, // e.g., "text-embedding-3-large"
+            input: batch, // array of strings (v4 OK)
+          });
+
+          if (!embRes?.data || embRes.data.length !== batch.length) {
+            throw new Error("Embedding response size mismatch.");
+          }
+
+          batch.forEach((chunk, j) => {
+            rows.push({
+              ai_model_id: newModel._id.toString(), // <-- FIX: use `model`, not `newModel`
+              content: chunk,
+              embedding: embRes.data[j].embedding,
+              metadata: {
+                filename: null,
+                chunk_index: i + j,
+                created_at: new Date().toISOString(),
+              },
+            });
+          });
+        }
+
+        // Single insert to Supabase:
         const { error } = await supabase.from("documents").insert(rows);
         if (error) console.error("Supabase insert error:", error);
       }
@@ -142,6 +168,12 @@ exports.updateAIModel = async (req, res) => {
       // If fullTextContent updated, re-chunk and update Supabase vector DB
       if (fullTextContent) {
         const chunks = chunkText(fullTextContent);
+        console.log("chunks length:", chunks.length);
+        console.log(
+          "first item type/len:",
+          typeof chunks[0],
+          chunks[0]?.length
+        );
 
         // Delete existing vectors for this model's RAG table before inserting updated chunks
         await supabase
@@ -149,22 +181,43 @@ exports.updateAIModel = async (req, res) => {
           .delete()
           .eq("ai_model_id", model._id.toString());
 
-        // batch request (cheaper/faster than 1-by-1)
-        const embRes = await openaiClient.embeddings.create({
-          model: EMBEDDING_MODEL,
-          input: chunks, // array of strings
-        });
-        const rows = chunks.map((chunk, i) => ({
-          ai_model_id: newModel._id.toString(),
-          content: chunk,
-          embedding: embRes.data[i].embedding,
-          metadata: {
-            filename: null,
-            chunk_index: i,
-            created_at: new Date().toISOString(),
-          },
-        }));
+        // after you compute `chunks = chunkText(fullTextContent)`
+        const cleanChunks = (chunks || [])
+          .map((c) => (typeof c === "string" ? c : String(c ?? "")))
+          .map((c) => c.trim())
+          .filter((c) => c.length > 0);
 
+        // BATCH to avoid oversized request errors
+        const BATCH_SIZE = 100; // 64–128 is also fine
+        const rows = [];
+
+        for (let i = 0; i < cleanChunks.length; i += BATCH_SIZE) {
+          const batch = cleanChunks.slice(i, i + BATCH_SIZE);
+
+          const embRes = await openaiClient.embeddings.create({
+            model: EMBEDDING_MODEL, // e.g., "text-embedding-3-large"
+            input: batch, // array of strings (v4 OK)
+          });
+
+          if (!embRes?.data || embRes.data.length !== batch.length) {
+            throw new Error("Embedding response size mismatch.");
+          }
+
+          batch.forEach((chunk, j) => {
+            rows.push({
+              ai_model_id: model._id.toString(), // <-- FIX: use `model`, not `newModel`
+              content: chunk,
+              embedding: embRes.data[j].embedding,
+              metadata: {
+                filename: null,
+                chunk_index: i + j,
+                created_at: new Date().toISOString(),
+              },
+            });
+          });
+        }
+
+        // Single insert to Supabase:
         const { error } = await supabase.from("documents").insert(rows);
         if (error) console.error("Supabase insert error:", error);
       }
