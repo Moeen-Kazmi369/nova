@@ -17,14 +17,20 @@ export const ChatMessage = ({
   const audioRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
   const getFileIcon = (mimetype) => {
-    if (mimetype.startsWith("image/")) return <ImageIcon className="w-5 h-5" />;
-    if (mimetype === "application/pdf") return <FileText className="w-5 h-5" />;
-    return <FileIcon className="w-5 h-5" />;
+    if (mimetype.startsWith("image/"))
+      return <ImageIcon className="w-4 h-4 md:w-5 md:h-5" />;
+    if (mimetype === "application/pdf")
+      return <FileText className="w-4 h-4 md:w-5 md:h-5" />;
+    return <FileIcon className="w-4 h-4 md:w-5 md:h-5" />;
   };
   return (
-    <div className={`flex ${isUser ? "justify-start" : "justify-end"} mb-6`}>
+    <div
+      className={`flex ${
+        isUser ? "justify-start" : "justify-end"
+      } mb-4 md:mb-6`}
+    >
       <div
-        className={`max-w-md px-4 py-3 rounded-2xl backdrop-blur-sm border relative ${
+        className={`max-w-[85%] md:max-w-md px-3 py-2 md:px-4 md:py-3 rounded-2xl backdrop-blur-sm border relative ${
           isUser
             ? isPlaying
               ? "bg-slate-900/90 text-white border-slate-700/50"
@@ -42,7 +48,9 @@ export const ChatMessage = ({
                 className="flex items-center w-max max-w-full space-x-2 bg-slate-800 p-2 rounded"
               >
                 {getFileIcon(file.mimetype || file.type)}
-                <span className="text-sm">{file.filename || file.name}</span>
+                <span className="text-xs md:text-sm truncate max-w-[80px] md:max-w-[120px]">
+                  {file.filename || file.name}
+                </span>
               </div>
             ))}
           </div>
@@ -51,7 +59,7 @@ export const ChatMessage = ({
           {message}
         </p> */}
         {/* Markdown renderer */}
-        <div className="text-sm leading-relaxed break-words text-white prose prose-invert prose-pre:rounded-xl prose-pre:bg-slate-900/70 max-w-none">
+        <div className="text-xs md:text-sm leading-relaxed break-words text-white prose prose-invert prose-pre:rounded-xl prose-pre:bg-slate-900/70 max-w-none">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]}
@@ -70,7 +78,7 @@ export const ChatMessage = ({
                 if (inline) {
                   return (
                     <code
-                      className={`px-1 py-0.5 rounded bg-slate-900/60 ${
+                      className={`px-1 py-0.5 rounded bg-slate-900/60 text-xs ${
                         className || ""
                       }`}
                       {...props}
@@ -80,7 +88,7 @@ export const ChatMessage = ({
                   );
                 }
                 return (
-                  <pre className="p-3 rounded-xl overflow-x-auto">
+                  <pre className="p-2 md:p-3 rounded-xl overflow-x-auto text-xs md:text-sm">
                     <code className={className} {...props}>
                       {children}
                     </code>
@@ -90,38 +98,47 @@ export const ChatMessage = ({
               table: (props) => (
                 <div className="overflow-x-auto">
                   <table
-                    className="min-w-full border-separate border-spacing-0"
+                    className="min-w-full border-separate border-spacing-0 text-xs md:text-sm"
                     {...props}
                   />
                 </div>
               ),
               th: (props) => (
                 <th
-                  className="border-b border-slate-700 px-3 py-2 text-left"
+                  className="border-b border-slate-700 px-2 py-1 md:px-3 md:py-2 text-left"
                   {...props}
                 />
               ),
               td: (props) => (
                 <td
-                  className="border-b border-slate-800 px-3 py-2"
+                  className="border-b border-slate-800 px-2 py-1 md:px-3 md:py-2"
                   {...props}
                 />
               ),
               h1: (props) => (
-                <h1 className="text-xl font-bold mt-2 mb-1" {...props} />
+                <h1
+                  className="text-lg md:text-xl font-bold mt-2 mb-1"
+                  {...props}
+                />
               ),
               h2: (props) => (
-                <h2 className="text-lg font-semibold mt-2 mb-1" {...props} />
+                <h2
+                  className="text-base md:text-lg font-semibold mt-2 mb-1"
+                  {...props}
+                />
               ),
               ul: (props) => (
-                <ul className="list-disc pl-5 space-y-1" {...props} />
+                <ul className="list-disc pl-4 md:pl-5 space-y-1" {...props} />
               ),
               ol: (props) => (
-                <ol className="list-decimal pl-5 space-y-1" {...props} />
+                <ol
+                  className="list-decimal pl-4 md:pl-5 space-y-1"
+                  {...props}
+                />
               ),
               blockquote: (props) => (
                 <blockquote
-                  className="border-l-4 border-slate-600 pl-3 italic opacity-90"
+                  className="border-l-2 md:border-l-4 border-slate-600 pl-2 md:pl-3 italic opacity-90"
                   {...props}
                 />
               ),
@@ -132,7 +149,7 @@ export const ChatMessage = ({
         </div>
         {timestamp && (
           <div className="mt-2 flex items-center justify-between">
-            <p className="text-xs text-gray-400">
+            <p className="text-[10px] md:text-xs text-gray-400">
               {timestamp.toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -209,14 +226,14 @@ export const ChatMessage = ({
             >
               {isLoading ? (
                 <span className="flex space-x-1">
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.2s]"></span>
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.1s]"></span>
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
+                  <span className="w-1 h-1 md:w-1.5 md:h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.2s]"></span>
+                  <span className="w-1 h-1 md:w-1.5 md:h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.1s]"></span>
+                  <span className="w-1 h-1 md:w-1.5 md:h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
                 </span>
               ) : isPlaying ? (
-                <VolumeX size={16} />
+                <VolumeX size={14} className="md:w-4 md:h-4" />
               ) : (
-                <Volume2 size={16} />
+                <Volume2 size={14} className="md:w-4 md:h-4" />
               )}
             </button>
           </div>

@@ -1,5 +1,4 @@
-
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 
 export const CircularWaveform = ({
   isActive,
@@ -83,6 +82,9 @@ export const CircularWaveform = ({
     };
   }, [isActive, isUserInput, size, audioLevel]);
 
+  // Responsive outer glow effect
+  const glowSize = Math.max(20, size * 0.1);
+
   return (
     <div className={`relative ${className}`}>
       <canvas
@@ -95,19 +97,30 @@ export const CircularWaveform = ({
       {isActive && (
         <>
           <div
-            className={`absolute inset-0 rounded-full blur-lg animate-pulse ${
+            className={`absolute inset-0 rounded-full blur-md animate-pulse ${
               isUserInput
                 ? "bg-gradient-to-r from-emerald-500/20 via-emerald-400/30 to-emerald-500/20"
                 : "bg-gradient-to-r from-blue-500/20 via-cyan-400/30 to-blue-500/20"
             }`}
+            style={{
+              top: `-${glowSize}px`,
+              left: `-${glowSize}px`,
+              right: `-${glowSize}px`,
+              bottom: `-${glowSize}px`,
+            }}
           />
           <div
-            className={`absolute inset-0 rounded-full blur-xl animate-pulse ${
+            className={`absolute inset-0 rounded-full blur-lg animate-pulse ${
               isUserInput
                 ? "bg-gradient-to-r from-emerald-500/10 via-emerald-400/20 to-emerald-500/10"
                 : "bg-gradient-to-r from-blue-500/10 via-cyan-400/20 to-blue-500/10"
             }`}
-            style={{ animationDelay: "0.5s" }}
+            style={{
+              top: `-${glowSize * 1.5}px`,
+              left: `-${glowSize * 1.5}px`,
+              right: `-${glowSize * 1.5}px`,
+              bottom: `-${glowSize * 1.5}px`,
+            }}
           />
         </>
       )}
@@ -338,5 +351,3 @@ function drawCircularUserWaveform(
 
   ctx.restore();
 }
-
-

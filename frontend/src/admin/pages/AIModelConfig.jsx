@@ -39,12 +39,16 @@ function InfoNote({ title, children }) {
         aria-label={`More info about ${title}`}
       >
         <Info className="w-4 h-4" />
-        <ChevronDown className={`w-3 h-3 ml-1 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          className={`w-3 h-3 ml-1 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        />
       </button>
 
       {open && (
         <div
-          className="absolute z-10 mt-2 w-80 max-w-[80vw] rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm shadow-xl"
+          className="absolute z-10 mt-2 w-64 md:w-80 max-w-[80vw] rounded-lg border border-slate-700 bg-slate-800 p-3 text-sm shadow-xl"
           role="region"
           aria-label={title}
         >
@@ -75,26 +79,26 @@ const AIModelConfig = () => {
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isSaving,setIsSaving]=useState(false)
+  const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [modelFiles, setModelFiles] = useState([]);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
-  const navigate=useNavigate()
+  const navigate = useNavigate();
 
   const { data: models, isLoading: isModelsLoading } =
     useGetAllAIModelsForAdmin();
   const createAIModel = useCreateAIModel();
   const updateAIModel = useUpdateAIModel();
   const adminPlaygroundTextChat = useAdminPlaygroundTextChat();
-useEffect(() => {
-  if (messagesEndRef.current) {
-    messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-  }
-}, [messages, isProcessing]);
   useEffect(() => {
-    if (models && id && id !=="new") {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isProcessing]);
+  useEffect(() => {
+    if (models && id && id !== "new") {
       const model = models.find((m) => m._id === id);
       if (model) {
         setConfig({
@@ -139,9 +143,9 @@ useEffect(() => {
   const removeModelFile = (index) => {
     setModelFiles((prev) => prev.filter((_, i) => i !== index));
   };
-console.log(messages);
+  console.log(messages);
   const handleSave = async () => {
-    setIsSaving(true);    
+    setIsSaving(true);
     try {
       const modelData = new FormData();
       modelData.append("name", config.name);
@@ -152,7 +156,7 @@ console.log(messages);
         if (file?.textContent) return;
         modelData.append("files", file);
       });
-      if (id && id !== "new" ) {
+      if (id && id !== "new") {
         await updateAIModel.mutateAsync({ id, modelData });
         toast.success("Model updated successfully");
       } else {
@@ -249,25 +253,99 @@ console.log(messages);
     }
   };
 
+  // Responsive states
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isConfigOpen, setIsConfigOpen] = useState(true);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
-    <div className="flex h-screen bg-[#020617] text-white">
-      {/* Left: Config Section */}
-      <div className="w-1/3 bg-slate-900 border-r border-slate-800 flex flex-col">
-        {/* Title (fixed) */}
-        <div className="p-6 flex flex-col gap-2 flex-shrink-0 border-b border-slate-800">
-          <ArrowLeft
+    <div className="flex flex-col md:flex-row h-screen bg-[#020617] text-white">
+      {/* Mobile header */}
+      {isMobile && (
+        <div className="flex items-center justify-between p-4 border-b border-slate-800 md:hidden">
+          <button
             onClick={() => navigate("/admin?navOption=models")}
-            className="text-white mt-1 cursor-pointer"
-          />
-          {id === "new" ? (
-            <h2 className="text-2xl font-bold">Create Nova 1000 AI Model</h2>
-          ) : (
-            <h2 className="text-2xl font-bold">Configure {config.name}</h2>
-          )}
+            className="p-2 rounded-lg bg-slate-800"
+          >
+            <ArrowLeft className="text-white w-6 h-6" />
+          </button>
+          <h2 className="text-lg font-bold truncate">
+            {id === "new" ? "Create Model" : config.name || "Configure Model"}
+          </h2>
+          <button
+            onClick={() => setIsConfigOpen(!isConfigOpen)}
+            className="p-2 rounded-lg bg-slate-800"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Left: Config Section */}
+      <div
+        className={`${
+          isMobile
+            ? `fixed inset-y-0 left-0 z-50 w-full bg-slate-900 border-r border-slate-800 flex flex-col transform ${
+                isConfigOpen ? "translate-x-0" : "-translate-x-full"
+              } transition-transform duration-300 ease-in-out md:static md:translate-x-0`
+            : "w-full md:w-1/3 bg-slate-900 border-r border-slate-800 flex flex-col"
+        }`}
+      >
+        {/* Title (fixed) */}
+        <div className="p-4 md:p-6 flex flex-col gap-2 flex-shrink-0 border-b border-slate-800">
+          <div className="flex items-center gap-2 md:hidden">
+            <button
+              onClick={() => navigate("/admin?navOption=models")}
+              className="p-2 rounded-lg bg-slate-800"
+            >
+              <ArrowLeft className="text-white w-5 h-5" />
+            </button>
+            <h2 className="text-lg md:text-2xl font-bold truncate">
+              {id === "new"
+                ? "Create Nova 1000 AI Model"
+                : `Configure ${config.name}`}
+            </h2>
+          </div>
+          <div className="hidden md:block">
+            <ArrowLeft
+              onClick={() => navigate("/admin?navOption=models")}
+              className="text-white mt-1 cursor-pointer"
+            />
+            {id === "new" ? (
+              <h2 className="text-2xl font-bold">Create Nova 1000 AI Model</h2>
+            ) : (
+              <h2 className="text-2xl font-bold">Configure {config.name}</h2>
+            )}
+          </div>
         </div>
 
         {/* Scrollable form */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-hide">
           <label className="block">
             <span className="block mb-1 font-medium">Model Name</span>
             <input
@@ -275,7 +353,7 @@ console.log(messages);
               name="name"
               value={config.name}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
               placeholder="e.g. NovaGPT"
             />
           </label>
@@ -305,7 +383,7 @@ console.log(messages);
               name="description"
               value={config.description}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
               rows={3}
               placeholder="This model greets users and explains ParkBlockX features…"
             />
@@ -344,7 +422,7 @@ console.log(messages);
               name="apiConfig.systemPrompt"
               value={config.apiConfig.systemPrompt}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
               rows={3}
               placeholder="You are ParkBlockX Assistant. Use provided context to answer questions accurately and concisely..."
             />
@@ -386,7 +464,7 @@ console.log(messages);
               step={0.01}
               value={config.apiConfig.temperature}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
             />
           </label>
 
@@ -423,7 +501,7 @@ console.log(messages);
               max={4096}
               value={config.apiConfig.maxTokens}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
             />
           </label>
 
@@ -433,7 +511,7 @@ console.log(messages);
               name="apiConfig.chatModel"
               value={config.apiConfig.chatModel}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
             >
               <option value="gpt-4o-mini">gpt-4o-mini</option>
               <option value="gpt-4o">gpt-4o</option>
@@ -448,7 +526,7 @@ console.log(messages);
               name="apiConfig.apiKey"
               value={config.apiConfig.apiKey}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
               placeholder="Enter OpenAI API Key"
             />
           </label>
@@ -459,7 +537,7 @@ console.log(messages);
               accept=".pdf,.txt,.csv,.json"
               multiple
               onChange={handleModelFileSelect}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
             />
             {modelFiles.length > 0 && (
               <div className="mt-2 space-y-2">
@@ -469,7 +547,7 @@ console.log(messages);
                     className="flex items-center space-x-2 bg-slate-800 p-2 rounded"
                   >
                     {getFileIcon(file.mimetype || file.type)}
-                    <span className="text-sm">
+                    <span className="text-sm truncate">
                       {file.filename || file.name}
                     </span>
                     <button
@@ -486,9 +564,9 @@ console.log(messages);
         </div>
 
         {/* Save button (fixed at bottom) */}
-        <div className="p-6 flex-shrink-0 border-t border-slate-800">
+        <div className="p-4 md:p-6 flex-shrink-0 border-t border-slate-800">
           <button
-            className="w-full px-4 py-2 flex justify-center items-center bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="w-full px-4 py-2 flex justify-center items-center bg-blue-600 text-white rounded hover:bg-blue-700 text-sm md:text-base"
             onClick={handleSave}
           >
             {isSaving ? (
@@ -500,8 +578,16 @@ console.log(messages);
         </div>
       </div>
 
+      {/* Overlay for mobile config panel */}
+      {isMobile && isConfigOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
+          onClick={() => setIsConfigOpen(false)}
+        />
+      )}
+
       {/* Right: Playground Section */}
-      <div className="w-2/3 flex flex-col bg-[#020617] h-screen">
+      <div className="w-full md:w-2/3 flex flex-col bg-[#020617] h-screen">
         {/* Header (fixed at top) */}
         <div className="px-4 py-4 flex flex-col items-center justify-center">
           <div className="mb-3 sm:mb-4">
@@ -511,12 +597,12 @@ console.log(messages);
               audioLevel={
                 false ? audioLevel : isSpeaking ? Math.random() * 0.8 + 0.2 : 0
               }
-              size={true ? 165 : 130}
+              size={isMobile ? 120 : 165}
               className="mx-auto"
             />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl pl-3 sm:text-3xl md:text-4xl font-light tracking-wider text-white ml-2 sm:ml-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-light tracking-wider text-white">
               NOVA 1000
               <span className="text-xs sm:text-sm align-top ml-1 text-gray-400">
                 ™
@@ -528,7 +614,7 @@ console.log(messages);
         {/* Messages (scrollable area) */}
         <div
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-4 py-2 scrollbar-hide"
+          className="flex-1 overflow-y-auto px-2 md:px-4 py-2 scrollbar-hide"
         >
           <div className="flex flex-col space-y-4">
             {messages.map((message) => (
@@ -590,7 +676,9 @@ console.log(messages);
                     className="flex items-center space-x-2 bg-slate-800/70 rounded-xl p-2"
                   >
                     {getFileIcon(file.type)}
-                    <span className="text-sm text-gray-300">{file.name}</span>
+                    <span className="text-sm text-gray-300 truncate max-w-[100px] md:max-w-[150px]">
+                      {file.name}
+                    </span>
                     <button
                       onClick={() => removeSelectedFile(index)}
                       className="text-red-500"

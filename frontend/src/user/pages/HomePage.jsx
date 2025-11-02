@@ -360,7 +360,7 @@ function HomePage() {
               className="p-2 rounded-full bg-slate-900/80 text-gray-200 shadow-lg hover:bg-slate-800/90 transition"
               aria-label="Open chat history"
             >
-              <Menu className="w-7 h-7" />
+              <Menu className="w-6 h-6 md:w-7 md:h-7" />
             </button>
           </div>
         )}
@@ -371,9 +371,9 @@ function HomePage() {
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={() => setIsSidebarOpen(false)}
             />
-            <div className="relative z-10 w-4/5 max-w-xs min-h-full bg-slate-900 border-r border-slate-800 shadow-xl animate-slideInLeft flex flex-col mobile-safe-top">
-              <div className="flex items-center justify-between pl-4 pr-4 border-b border-slate-800">
-                <h2 className="text-xl text-white">
+            <div className="relative z-10 w-full md:w-4/5 max-w-xs min-h-full bg-slate-900 border-r border-slate-800 shadow-xl animate-slideInLeft flex flex-col mobile-safe-top">
+              <div className="flex items-center justify-between pl-4 pr-4 border-b border-slate-800 py-3">
+                <h2 className="text-lg md:text-xl text-white truncate">
                   NOVA 1000
                   <span className="text-xs align-top m-1 text-gray-400">
                     ™
@@ -385,7 +385,7 @@ function HomePage() {
                   className="p-2 rounded-full text-gray-400 hover:text-white transition"
                   aria-label="Close chat history"
                 >
-                  <span className="text-5xl">×</span>
+                  <X className="w-5 h-5 md:w-6 md:h-6" />
                 </button>
               </div>
               <ChatSidebar
@@ -421,10 +421,10 @@ function HomePage() {
               isDeletingChatId={isDeletingChatId}
             />
           )}
-          <div className="flex-1 w-full max-w-4xl mx-auto px-4 min-h-0">
-            <div className="h-full flex flex-col ">
-              <div className="flex flex-col mb-4 items-center justify-center mobile-safe-top">
-                <div className="mb-3 sm:mb-4">
+          <div className="flex-1 w-full max-w-4xl mx-auto px-2 md:px-4 min-h-0">
+            <div className="h-full flex flex-col">
+              <div className="flex flex-col mb-3 md:mb-4 items-center justify-center mobile-safe-top pt-2">
+                <div className="mb-2 md:mb-3">
                   <CircularWaveform
                     isActive={isListening || isSpeaking || isProcessing}
                     isUserInput={isListening && !isSpeaking}
@@ -435,31 +435,33 @@ function HomePage() {
                         ? Math.random() * 0.8 + 0.2
                         : 0
                     }
-                    size={isDesktop ? 165 : 130}
+                    size={isDesktop ? 165 : 100}
                     className="mx-auto"
                   />
                 </div>
-                <div className="text-center">
-                  <h1 className="text-2xl pl-3 sm:text-3xl md:text-4xl font-light tracking-wider text-white ml-2 sm:ml-0">
+                <div className="text-center px-2">
+                  <h1 className="text-xl md:text-2xl lg:text-3xl font-light tracking-wider text-white">
                     NOVA 1000
-                    <span className="text-xs sm:text-sm align-top ml-1 text-gray-400">
+                    <span className="text-xs md:text-sm align-top ml-1 text-gray-400">
                       ™
                     </span>
                   </h1>
                 </div>
               </div>
-              <div className="flex-1 px-4 py-4 overflow-y-auto scrollbar-hide min-h-0">
-                <div className="flex-1 px-4 py-4 overflow-y-auto scrollbar-hide">
+              <div className="flex-1 px-2 md:px-4 py-2 md:py-4 overflow-y-auto scrollbar-hide min-h-0">
+                <div className="flex-1 px-2 md:px-4 py-2 md:py-4 overflow-y-auto scrollbar-hide">
                   {isMessagesLoading && !isProcessing ? (
-                    <p className="text-gray-400 text-center">
+                    <p className="text-gray-400 text-center text-sm md:text-base">
                       Loading messages...
                     </p>
                   ) : messagesError ? (
-                    <p className="text-red-400 text-center">
+                    <p className="text-red-400 text-center text-sm md:text-base">
                       Error loading messages: {messagesError.message}
                     </p>
                   ) : !chatMessages || chatMessages.length === 0 ? (
-                    <p className="text-gray-400 text-center">No messages yet</p>
+                    <p className="text-gray-400 text-center text-sm md:text-base">
+                      No messages yet
+                    </p>
                   ) : (
                     chatMessages.map((message) => (
                       <ChatMessage
@@ -473,39 +475,39 @@ function HomePage() {
                     ))
                   )}
                   {isProcessing && (
-                    <div className="flex justify-end mb-6">
-                      <div className="bg-slate-800/80 px-4 py-3 rounded-2xl max-w-xs">
+                    <div className="flex justify-end mb-4 md:mb-6">
+                      <div className="bg-slate-800/80 px-3 py-2 md:px-4 md:py-3 rounded-2xl max-w-xs">
                         <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100" />
-                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200" />
+                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-pulse" />
+                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-pulse delay-100" />
+                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-pulse delay-200" />
                         </div>
                       </div>
                     </div>
                   )}
                   {errorMessage && (
-                    <div className="mb-2 text-red-400 text-sm bg-slate-800/70 rounded-lg p-2 text-center">
+                    <div className="mb-2 text-red-400 text-xs md:text-sm bg-slate-800/70 rounded-lg p-2 text-center">
                       {errorMessage}
                     </div>
                   )}
                   <div ref={messagesEndRef} />
-                  <div className="h-4" />
+                  <div className="h-2 md:h-4" />
                 </div>
               </div>
-              <div className="flex-shrink-0 px-2 pb-2">
+              <div className="flex-shrink-0 px-2 pb-2 md:px-4 md:pb-4">
                 <div className="mb-2 flex flex-col space-y-2">
                   {selectedFiles.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-2">
                       {selectedFiles.map((file, index) => (
                         <div
                           key={index}
-                          className="flex items-center space-x-2 bg-slate-800/70 rounded-xl p-2"
+                          className="flex items-center space-x-1 md:space-x-2 bg-slate-800/70 rounded-xl p-1 md:p-2"
                         >
                           {file.type.startsWith("image/") ? (
                             <img
                               src={URL.createObjectURL(file)}
                               alt={file.name}
-                              className="w-12 h-12 object-cover rounded-md"
+                              className="w-8 h-8 md:w-12 md:h-12 object-cover rounded-md"
                               onLoad={(e) => {
                                 // Clean up previous URL if any (optional, for safety)
                                 URL.revokeObjectURL(e.target.src);
@@ -514,15 +516,15 @@ function HomePage() {
                           ) : (
                             getFileIcon(file.type)
                           )}
-                          <span className="text-sm text-gray-300">
+                          <span className="text-xs md:text-sm text-gray-300 truncate max-w-[60px] md:max-w-[100px]">
                             {file.name}
                           </span>
                           <button
                             onClick={() => removeSelectedFile(index)}
-                            className="text-red-500"
+                            className="text-red-500 p-0.5"
                             disabled={isSending}
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3 h-3 md:w-4 md:h-4" />
                           </button>
                         </div>
                       ))}
@@ -541,7 +543,7 @@ function HomePage() {
                         onChange={handleFileSelect}
                         disabled={isProcessing || isSending}
                       />
-                      <Plus className="w-5 h-5" />
+                      <Plus className="w-4 h-4 md:w-5 md:h-5" />
                     </label>
                     <TextInput
                       onSubmit={() => handleSendMessage(inputValue)}
@@ -552,45 +554,45 @@ function HomePage() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center justify-between mb-2 sm:mb-0">
-                  <div className="flex items-center space-x-3">
+                <div className="flex items-center justify-between mb-1 md:mb-2">
+                  <div className="flex items-center space-x-2 md:space-x-3">
                     <button
                       onClick={() => setIsMenuOpen(true)}
-                      className="p-2 text-gray-400 hover:text-white transition-colors"
+                      className="p-1.5 md:p-2 text-gray-400 hover:text-white transition-colors"
                     >
-                      <Menu className="w-5 h-5" />
+                      <Menu className="w-4 h-4 md:w-5 md:h-5" />
                     </button>
                   </div>
                   <div
-                    className="flex-shrink-0 text-center pb-2"
+                    className="flex-shrink-0 text-center pb-1"
                     style={{ minHeight: "20px" }}
                   >
                     {(isSpeaking || isUserSpeaking) && (
                       <div className="flex flex-col items-center justify-center py-0">
                         {isSpeaking ? (
-                          <p className="text-xs animate-pulse text-blue-400">
+                          <p className="text-[10px] md:text-xs animate-pulse text-blue-400">
                             NOVA 1000™ is speaking...
                           </p>
                         ) : (
-                          <p className="text-xs animate-pulse text-emerald-400">
+                          <p className="text-[10px] md:text-xs animate-pulse text-emerald-400">
                             Voice detected...
                           </p>
                         )}
-                        <div className="flex justify-center mt-1 space-x-1">
+                        <div className="flex justify-center mt-1 space-x-0.5 md:space-x-1">
                           {[...Array(5)].map((_, i) => (
                             <div
                               key={i}
-                              className={`w-1 rounded-full animate-pulse ${
+                              className={`w-0.5 md:w-1 rounded-full animate-pulse ${
                                 isSpeaking
-                                  ? "bg-blue-500 h-2"
+                                  ? "bg-blue-500 h-1.5 md:h-2"
                                   : "bg-emerald-500"
                               }`}
                               style={{
                                 animationDelay: `${i * 0.1}s`,
                                 height:
                                   isListening && !isSpeaking
-                                    ? `${4 + audioLevel * 8}px`
-                                    : "8px",
+                                    ? `${2 + audioLevel * 4}px`
+                                    : "6px",
                               }}
                             />
                           ))}
@@ -598,9 +600,9 @@ function HomePage() {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center space-x-3 relative pl-2">
+                  <div className="flex items-center space-x-2 md:space-x-3 relative pl-1 md:pl-2">
                     {!isDesktop && isIOS && permissionStatus === "denied" && (
-                      <div className="absolute bottom-full right-0 mb-2 text-center text-red-400 text-xs bg-slate-800/90 px-3 py-2 rounded-lg whitespace-nowrap">
+                      <div className="absolute bottom-full right-0 mb-1 md:mb-2 text-center text-red-400 text-[10px] md:text-xs bg-slate-800/90 px-2 py-1 rounded-lg whitespace-nowrap">
                         🎤 Microphone blocked.{" "}
                         <a
                           href="/mic-access"
@@ -614,18 +616,19 @@ function HomePage() {
                       type="button"
                       onClick={handleNavigateToVoiceMode}
                       title="Start voice input"
+                      className="p-1"
                     >
                       <span className="sr-only">Start voice input</span>
                       <img
                         src={micIcone}
-                        className={`w-12 h-12`}
+                        className={`w-8 h-8 md:w-10 md:h-10`}
                         alt="Microphone"
                       />
                     </button>
                   </div>
                 </div>
               </div>
-              <div className="flex-shrink-0 px-2 md:px-0 text-center py-2 text-gray-500 text-sm">
+              <div className="flex-shrink-0 px-2 md:px-4 text-center py-1 md:py-2 text-gray-500 text-[10px] md:text-xs">
                 <p>Power By: DIMENSIONAL INTEGRITY ENGINE & IMMORTAL LOGIC</p>
               </div>
             </div>

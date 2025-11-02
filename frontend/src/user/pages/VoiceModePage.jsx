@@ -42,17 +42,15 @@ const VoiceModePage = () => {
       await navigator.mediaDevices.getUserMedia({ audio: true });
       const userId = JSON.parse(localStorage.getItem("user") || "{}")?.userId;
       const chatType = conversationId && conversationId !== "null";
-      console.log(
-        {
-          conversationId:
-            conversationId && conversationId !== "null"
-              ? conversationId
-              : undefined,
-          aiModelId: aiModelId && aiModelId !== "null" ? aiModelId : undefined,
-          chatType: chatType ? "old" : "new",
-          userId: userId && userId !== "null" ? userId : undefined,
-        }
-      )
+      console.log({
+        conversationId:
+          conversationId && conversationId !== "null"
+            ? conversationId
+            : undefined,
+        aiModelId: aiModelId && aiModelId !== "null" ? aiModelId : undefined,
+        chatType: chatType ? "old" : "new",
+        userId: userId && userId !== "null" ? userId : undefined,
+      });
       await conversation.startSession({
         agentId: import.meta.env.VITE_ELEVEN_LAB_AGENT_ID,
         connectionType: "websocket",
@@ -116,7 +114,7 @@ const VoiceModePage = () => {
       >
         <div className="flex-shrink-0 flex items-center justify-between p-3 mobile-safe-top">
           <div className="text-center">
-            <h2 className="text-lg font-light tracking-wider text-white">
+            <h2 className="text-base md:text-lg font-light tracking-wider text-white">
               Voice Mode
             </h2>
           </div>
@@ -124,53 +122,55 @@ const VoiceModePage = () => {
             onClick={() => setIsMenuOpen(true)}
             className="p-2 text-gray-400 hover:text-white transition-colors"
           >
-            <Menu className="w-5 h-5" />
+            <Menu className="w-5 h-5 md:w-6 md:h-6" />
           </button>
         </div>
 
-        <div className="flex-1 py-6 flex flex-col items-center justify-center px-4">
-          <div className="mb-4 mt-[-20px]">
+        <div className="flex-1 py-4 md:py-6 flex flex-col items-center justify-center px-4">
+          <div className="mb-3 md:mb-4 mt-[-10px] md:mt-[-20px]">
             <CircularWaveform
               isActive={isListening || isSpeaking || false}
               isUserInput={isListening}
               audioLevel={Math.random() * 0.8 + 0.2}
-              size={isDesktop ? 250 : 150}
+              size={isDesktop ? 250 : 120}
               className="mx-auto"
             />
           </div>
 
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-light tracking-wider text-white mb-4">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-light tracking-wider text-white mb-3 md:mb-4 text-center">
             NOVA 1000
-            <span className="text-sm sm:text-base align-top ml-1 text-gray-400">
+            <span className="text-xs sm:text-sm md:text-base align-top ml-1 text-gray-400">
               ™
             </span>
           </h1>
 
-          <div className="text-center mb-6 min-h-[50px] flex flex-col items-center justify-center">
+          <div className="text-center mb-4 md:mb-6 min-h-[40px] md:min-h-[50px] flex flex-col items-center justify-center">
             {connectionStatus === "connecting" && (
-              <p className="text-yellow-400 animate-pulse">
+              <p className="text-yellow-400 animate-pulse text-sm md:text-base">
                 Initializing connection...
               </p>
             )}
             {isSpeaking && (
-              <p className="text-cyan-400 animate-pulse">
+              <p className="text-cyan-400 animate-pulse text-sm md:text-base">
                 NOVA 1000™ is speaking...
               </p>
             )}
             {isListening && micOn && (
-              <p className="text-emerald-400 animate-pulse">Listening...</p>
+              <p className="text-emerald-400 animate-pulse text-sm md:text-base">
+                Listening...
+              </p>
             )}
           </div>
 
           {isDesktop && (
-            <div className="text-center text-gray-500 text-xs">
+            <div className="text-center text-gray-500 text-xs md:text-sm">
               <p>Real-time voice with {aiModelName}</p>
             </div>
           )}
-          <div className="flex justify-center gap-4 mt-4">
+          <div className="flex justify-center gap-3 md:gap-4 mt-3 md:mt-4">
             <button
               onClick={handleMicToggle}
-              className={`p-2 rounded-full transition-colors flex items-center justify-center
+              className={`p-2 md:p-3 rounded-full transition-colors flex items-center justify-center
       ${
         micOn
           ? "bg-gray-800 text-gray-400 hover:text-white"
@@ -179,18 +179,18 @@ const VoiceModePage = () => {
               aria-label={micOn ? "Turn mic off" : "Turn mic on"}
             >
               {micOn ? (
-                <Mic className="w-5 h-5" />
+                <Mic className="w-4 h-4 md:w-5 md:h-5" />
               ) : (
-                <MicOff className="w-5 h-5" />
+                <MicOff className="w-4 h-4 md:w-5 md:h-5" />
               )}
             </button>
             <button
               onClick={() => navigate("/")}
-              className="p-2 text-gray-400 bg-gray-800 rounded-full hover:text-white transition-colors flex items-center justify-center"
+              className="p-2 md:p-3 text-gray-400 bg-gray-800 rounded-full hover:text-white transition-colors flex items-center justify-center"
               aria-label="Close"
             >
               <svg
-                className="w-5 h-5"
+                className="w-4 h-4 md:w-5 md:h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -206,7 +206,7 @@ const VoiceModePage = () => {
           </div>
         </div>
 
-        <div className="flex-shrink-0 text-center py-2 text-gray-500 text-xs mobile-safe-bottom">
+        <div className="flex-shrink-0 text-center p-2 text-gray-500 text-[10px] md:text-xs mobile-safe-bottom">
           <p>
             Power by 1000× Dimensional Cognition Cube™ — Secured by Dimensional
             Integrity Engine™ + Immortal Logic
