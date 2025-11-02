@@ -140,7 +140,7 @@ const ChatSidebar = ({
         onClick={() => {
           localStorage.removeItem("user");
           localStorage.removeItem("autoCreateChat");
-          window.location.href = "/";
+          window.location.href = "/login";
         }}
       >
         <LogOut className="w-4 h-4 mr-2" />
