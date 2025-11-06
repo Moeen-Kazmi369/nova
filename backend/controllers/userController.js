@@ -454,7 +454,13 @@ exports.elevenLabsLLM = async (req, res) => {
     const ragContext = (model.fullTextContent || "").slice(0, 1200);
 
     const systemPrompt =
-      model.apiConfig?.systemPrompt ||
+      model.apiConfig?.systemPrompt +
+        `
+      **Strict Instruction for Response Generation:**
+
+1.  **NO TRADEMARKS:** When generating any response, you must strictly exclude all trademark, registered, or service mark symbols ($™, ®, SM$) from the specific product name "NOVA 1000".
+2.  **Required Format:** The name must *always* be rendered as **NOVA 1000**.
+3.  **Forbidden Format:** You must **never** use "NOVA 1000™", "NOVA 1000®", or any similar variation.` ||
       "You are a careful assistant. Use the provided CONTEXT; if insufficient, say so.";
 
     // Build messages: system → context → history → user
