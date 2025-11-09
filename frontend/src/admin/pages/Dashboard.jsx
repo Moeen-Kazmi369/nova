@@ -244,7 +244,7 @@ export default function Dashboard() {
         {/* Header */}
         <header className="flex items-center justify-between px-4 md:px-8 py-4 border-b border-gray-700 flex-shrink-0">
           <h2 className="text-lg md:text-xl font-semibold uppercase tracking-wide">
-            {selectedNav === "users" ? "Users" : "AI Models"}
+            {selectedNav === "users" ? "Users" : "ACE™ Agents"}
           </h2>
           {selectedNav === "models" ? (
             <button
