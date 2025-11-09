@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { ChatMessage } from "../components/ChatMessage";
 import { TextInput } from "../components/TextInput";
-import { CircularWaveform } from "../components/CircularWaveform";
 import {
   useGetAllAIModelsForAdmin,
   useCreateAIModel,
@@ -23,6 +22,7 @@ import {
 
 // imports (add these at the top)
 import { Info, ChevronDown } from "lucide-react";
+import { CircularWaveform } from "../../user/components/CircularWaveform";
 
 // Reusable helper
 function InfoNote({ title, children }) {
