@@ -440,7 +440,7 @@ function HomePage() {
                   />
                 </div>
                 <div className="text-center px-2">
-                  <h1 className="text-xl md:text-2xl lg:text-3xl font-light tracking-wider text-white">
+                  <h1 className="text-xl ml-2 mb-2 md:text-2xl lg:text-3xl font-light tracking-wider text-white">
                     NOVA 1000
                     <span className="text-xs md:text-sm align-top ml-1 text-gray-400">
                       ™

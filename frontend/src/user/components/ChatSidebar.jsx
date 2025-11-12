@@ -30,7 +30,7 @@ const ChatSidebar = ({
         {/* Models Section */}
         <div className="max-h-40 overflow-y-auto">
           <h3 className="text-sm font-semibold text-gray-300 mb-2">
-            AI Models
+            ACE™ Agents
           </h3>
           {models.length === 0 ? (
             <div className="text-gray-400 text-sm">No models available</div>

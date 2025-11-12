@@ -56,7 +56,7 @@ const Login = () => {
         >
           <div className="flex flex-col justify-center items-center mb-6">
             <img src={Icon} alt="logo" className="w-20 md:w-24 mb-3" />
-            <h2 className="text-xl md:text-2xl font-bold text-center">
+            <h2 className="text-xl ml-1 mb-1 md:text-2xl font-bold text-center">
               NOVA 1000
               <span className="text-sm align-top ml-1 text-gray-400">™</span>
             </h2>
