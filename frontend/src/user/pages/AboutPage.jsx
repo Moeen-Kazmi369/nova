@@ -38,7 +38,7 @@ const AboutPage = () => {
         </p>
         <p className="text-base mb-4">
           Designed to think, create, and build at 1000x strategic depth.
-          Governed by conscience. Power by the Dimensional Integrity Engine.
+          Governed by conscience. Powered by the Dimensional Integrity Engine.
         </p>
         <div className="text-cyan-400 font-medium space-y-1 mb-6">
           <a
@@ -79,7 +79,7 @@ const AboutPage = () => {
           </p>
           <p>
             Designed to think, create, and build at 1000x strategic depth.
-            Governed by conscience. Power by the Dimensional Integrity Engine.
+            Governed by conscience. Powered by the Dimensional Integrity Engine.
           </p>
 
           <div className="pt-1">

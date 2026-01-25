@@ -432,8 +432,8 @@ function HomePage() {
                       isListening
                         ? audioLevel
                         : isSpeaking
-                        ? Math.random() * 0.8 + 0.2
-                        : 0
+                          ? Math.random() * 0.8 + 0.2
+                          : 0
                     }
                     size={isDesktop ? 165 : 100}
                     className="mx-auto"
@@ -629,7 +629,7 @@ function HomePage() {
                 </div>
               </div>
               <div className="flex-shrink-0 px-2 md:px-4 text-center py-1 md:py-2 text-gray-500 text-[10px] md:text-xs">
-                <p>Power By: DIMENSIONAL INTEGRITY ENGINE & IMMORTAL LOGIC</p>
+                <p>Powered By: DIMENSIONAL INTEGRITY ENGINE & IMMORTAL LOGIC</p>
               </div>
             </div>
           </div>
