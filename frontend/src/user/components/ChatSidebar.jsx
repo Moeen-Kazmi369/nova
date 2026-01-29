@@ -1,4 +1,4 @@
-import { LogOut, FileText, ImageIcon, FileIcon, Loader2 } from "lucide-react";
+import { LogOut, Plus, MessageSquare, Trash2, Edit2, Check, X, Loader2, Bot } from "lucide-react";
 import React, { useState } from "react";
 import Icon from "../../assets/Icon.png";
 
@@ -15,134 +15,162 @@ const ChatSidebar = ({
   isCreatingNewChat,
   isDeletingChatId,
 }) => {
-  const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
+  const [editingId, setEditingId] = useState(null);
+
   return (
-    <div className="w-full md:w-[300px] bg-slate-900 border-r border-slate-800 min-h-screen flex flex-col p-4 overflow-y-auto">
-      <div className="hidden md:flex md:flex-row flex-col gap-2 items-center mb-4">
-        <img src={Icon} alt="logo" className="w-8" />
-        <h2 className="hidden md:block text-xl text-white">
+    <div className="w-full md:w-[300px] bg-[#0f172a] border-r border-slate-800 flex flex-col p-4 flex-1 min-h-0 md:flex-none md:h-full">
+      {/* Header */}
+      <div className="flex flex-row items-center gap-3 mb-6 px-1">
+        <img src={Icon} alt="logo" className="w-8 h-8 object-contain" />
+        <h2 className="text-xl font-semibold text-white tracking-tight">
           NOVA 1000
-          <span className="text-xs align-top m-1 text-gray-400">™</span>
+          <span className="text-[10px] align-top ml-0.5 text-cyan-500 font-bold uppercase">tm</span>
         </h2>
       </div>
-      <div className="md:flex-1 space-y-4">
-        {/* Models Section */}
-        <div className="max-h-40 overflow-y-auto">
-          <h3 className="text-sm font-semibold text-gray-300 mb-2">
-            ACE™ Agents
-          </h3>
-          {models.length === 0 ? (
-            <div className="text-gray-400 text-sm">No models available</div>
-          ) : (
-            models.map((model) => (
-              <div
-                key={model._id}
-                className={`group flex items-center justify-between p-2 rounded cursor-pointer transition-all ${
-                  model._id === selectedModelId
-                    ? "bg-slate-800 text-cyan-400"
-                    : "bg-slate-800/60 text-white hover:bg-slate-800"
-                }`}
-                onClick={() => onSelectModel(model._id)}
-              >
-                <span
-                  className="truncate flex-1 text-sm md:text-base"
-                  title={model.name}
-                >
-                  {model.name}
-                </span>
+
+      {/* New Chat Button */}
+      <button
+        className="w-full mb-6 bg-blue-600 hover:bg-blue-500 text-white py-2.5 px-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98]"
+        onClick={onCreateChat}
+        disabled={isCreatingNewChat}
+      >
+        {isCreatingNewChat ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Plus className="w-4 h-4" />
+        )}
+        New Chat
+      </button>
+
+      {/* Main Scrollable Content */}
+      <div className="flex-1 flex flex-col min-h-0 space-y-6 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+
+        {/* Agents Section */}
+        <div className="flex flex-col flex-shrink-0">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+              <Bot className="w-3 h-3" /> ACE™ Agents
+            </h3>
+            <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full font-medium">
+              {models.length}
+            </span>
+          </div>
+          <div className="space-y-1">
+            {models.length === 0 ? (
+              <div className="text-slate-500 text-xs px-2 py-4 text-center border border-dashed border-slate-800 rounded-lg">
+                No models available
               </div>
-            ))
-          )}
+            ) : (
+              models.map((model) => (
+                <button
+                  key={model._id}
+                  onClick={() => onSelectModel(model._id)}
+                  className={`w-full group flex items-center gap-3 p-2.5 rounded-xl transition-all text-left ${model._id === selectedModelId
+                    ? "bg-blue-600/10 text-blue-400 border border-blue-600/20"
+                    : "text-slate-400 hover:bg-slate-800/50 hover:text-white border border-transparent"
+                    }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${model._id === selectedModelId ? "bg-blue-600 text-white" : "bg-slate-800 group-hover:bg-slate-700"
+                    }`}>
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <span className="truncate text-sm font-medium pr-2 flex-1" title={model.name}>
+                    {model.name}
+                  </span>
+                  {model._id === selectedModelId && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
+                  )}
+                </button>
+              ))
+            )}
+          </div>
         </div>
-        {/* Conversations Section */}
-        <div className="flex-1  overflow-y-auto">
-          <h3 className="text-sm flex items-center justify-between font-semibold text-gray-300 mb-2">
-            Chats
-            <button
-              className="bg-[#3489E9] hover:bg-[#2c80df] text-white w-24 md:w-28 px-2 py-1 md:px-3 md:py-1 rounded text-xs flex items-center justify-center"
-              onClick={onCreateChat}
-              disabled={isCreatingNewChat} // prevent double clicks
-            >
-              {isCreatingNewChat && (
-                <Loader2 className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2 animate-spin text-white" />
-              )}
-              <span className="truncate">+ New chat</span>
-            </button>
-          </h3>
-          <div className="h-64 md:h-full space-y-3 mt-3">
+
+        {/* Chats Section */}
+        <div className="flex flex-col flex-1 min-h-[200px]">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+              <MessageSquare className="w-3 h-3" /> Chat History
+            </h3>
+          </div>
+          <div className="space-y-1 pb-4">
             {conversations.length === 0 ? (
-              <div className="text-gray-400 text-sm">No chats yet</div>
+              <div className="text-slate-500 text-xs px-2 py-8 text-center bg-slate-900/30 rounded-xl border border-slate-800/50">
+                Your chat history will appear here
+              </div>
             ) : (
               conversations.map((chat) => (
                 <div
                   key={chat._id}
-                  className={`group flex items-center justify-between p-2 rounded cursor-pointer transition-all ${
+                  className={`group relative flex items-center gap-3 p-2.5 rounded-xl transition-all cursor-pointer border ${
                     chat._id === selectedChatId
-                      ? "bg-slate-800 text-cyan-400"
-                      : "bg-slate-800/60 text-white hover:bg-slate-800"
+                    ? "bg-slate-800/80 text-white border-slate-700 shadow-sm"
+                    : "text-slate-400 hover:bg-slate-800/40 hover:text-slate-200 border-transparent hover:border-slate-800/50"
                   }`}
                   onClick={() => onSelectChat(chat._id)}
                 >
+                  <MessageSquare className={`w-4 h-4 flex-shrink-0 ${chat._id === selectedChatId ? "text-blue-400" : "text-slate-500"}`} />
+
                   {editingId === chat._id ? (
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
-                        onRenameChat(chat._id, editTitle.trim() || chat.title);
+                        onRenameChat(chat._id, editTitle.trim() || chat.conversationName);
                         setEditingId(null);
                       }}
-                      className="flex-1 flex items-center"
+                      className="flex-1 flex items-center min-w-0"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <input
-                        className="bg-slate-700 text-white rounded px-2 py-1 text-xs flex-1 mr-2"
+                        className="bg-slate-900 text-white text-xs rounded border border-blue-500 px-2 py-1 flex-1 min-w-0 outline-none focus:ring-1 ring-blue-500"
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
                         autoFocus
-                        onBlur={() => setEditingId(null)}
+                        onBlur={() => {
+                          if (editTitle === chat.conversationName) setEditingId(null);
+                        }}
                       />
-                      <button
-                        type="submit"
-                        className="text-cyan-400 text-xs px-2"
-                      >
-                        Save
-                      </button>
+                      <div className="flex items-center ml-1">
+                        <button type="submit" className="p-1 text-green-400 hover:text-green-300">
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button type="button" onClick={() => setEditingId(null)} className="p-1 text-red-400 hover:text-red-300">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </form>
                   ) : (
                     <>
-                      <span
-                        className="truncate flex-1 text-sm"
-                        title={chat.conversationName}
-                      >
+                        <span className="truncate flex-1 text-sm font-medium" title={chat.conversationName}>
                         {chat.conversationName}
                       </span>
-                      <div className="flex items-center space-x-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+
+                        {/* Action Buttons: Visible on mobile, hover on desktop */}
+                        <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         <button
-                          className="text-xs text-red-400 hover:text-red-300 px-1 flex items-center"
+                            className="p-1 text-slate-500 hover:text-slate-200 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingId(chat._id);
+                              setEditTitle(chat.conversationName);
+                            }}
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            className="p-1 text-slate-500 hover:text-red-400 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             onDeleteChat(chat._id);
                           }}
                           disabled={isDeletingChatId === chat._id}
                         >
-                          {isDeletingChatId === chat._id && (
-                            <Loader2 className="w-2 h-2 md:w-3 md:h-3 mr-1 animate-spin text-red-400" />
-                          )}
-                          <span className="hidden md:inline">Delete</span>
-                          <span className="md:hidden">
-                            <svg
-                              className="w-3 h-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                          </span>
+                            {isDeletingChatId === chat._id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
                         </button>
                       </div>
                     </>
@@ -153,17 +181,23 @@ const ChatSidebar = ({
           </div>
         </div>
       </div>
-      <button
-        className="mt-4 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded text-sm"
-        onClick={() => {
-          localStorage.removeItem("user");
-          localStorage.removeItem("autoCreateChat");
-          window.location.href = "/login";
-        }}
-      >
-        <LogOut className="w-4 h-4 mr-2" />
-        Logout
-      </button>
+
+      {/* Footer */}
+      <div className="mt-auto pt-4 border-t border-slate-800">
+        <button
+          className="w-full flex items-center gap-3 p-3 rounded-xl text-slate-400 hover:text-white hover:bg-red-500/10 transition-all text-sm font-medium group"
+          onClick={() => {
+            localStorage.removeItem("user");
+            localStorage.removeItem("autoCreateChat");
+            window.location.href = "/login";
+          }}
+        >
+          <div className="w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-red-500 group-hover:text-white flex items-center justify-center transition-colors">
+            <LogOut className="w-4 h-4" />
+          </div>
+          Logout
+        </button>
+      </div>
     </div>
   );
 };

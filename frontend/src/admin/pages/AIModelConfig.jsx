@@ -254,8 +254,8 @@ const AIModelConfig = () => {
   };
 
   // Responsive states
+  const [activeTab, setActiveTab] = useState("config"); // 'config' or 'preview'
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isConfigOpen, setIsConfigOpen] = useState(true);
 
   useEffect(() => {
     const handleResize = () => {
@@ -266,99 +266,82 @@ const AIModelConfig = () => {
   }, []);
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-[#020617] text-white">
-      {/* Mobile header */}
+    <div className="flex flex-col md:flex-row h-screen bg-[#020617] text-white overflow-hidden">
+      {/* Mobile Header & Tabs */}
       {isMobile && (
-        <div className="flex items-center justify-between p-4 border-b border-slate-800 md:hidden">
-          <button
-            onClick={() => navigate("/admin?navOption=models")}
-            className="p-2 rounded-lg bg-slate-800"
-          >
-            <ArrowLeft className="text-white w-6 h-6" />
-          </button>
-          <h2 className="text-lg font-bold truncate">
-            {id === "new" ? "Create Model" : config.name || "Configure Model"}
-          </h2>
-          <button
-            onClick={() => setIsConfigOpen(!isConfigOpen)}
-            className="p-2 rounded-lg bg-slate-800"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* Left: Config Section */}
-      <div
-        className={`${
-          isMobile
-            ? `fixed inset-y-0 left-0 z-50 w-full bg-slate-900 border-r border-slate-800 flex flex-col transform ${
-                isConfigOpen ? "translate-x-0" : "-translate-x-full"
-              } transition-transform duration-300 ease-in-out md:static md:translate-x-0`
-            : "w-full md:w-1/3 bg-slate-900 border-r border-slate-800 flex flex-col"
-        }`}
-      >
-        {/* Title (fixed) */}
-        <div className="p-4 md:p-6 flex flex-col gap-2 flex-shrink-0 border-b border-slate-800">
-          <div className="flex items-center gap-2 md:hidden">
+        <div className="flex-shrink-0 flex flex-col bg-slate-900 border-b border-slate-800 z-50">
+          <div className="flex items-center p-4">
             <button
               onClick={() => navigate("/admin?navOption=models")}
-              className="p-2 rounded-lg bg-slate-800"
+              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors mr-3"
             >
               <ArrowLeft className="text-white w-5 h-5" />
             </button>
-            <h2 className="text-lg md:text-2xl font-bold truncate">
-              {id === "new"
-                ? "Create Nova 1000 AI Model"
-                : `Configure ${config.name}`}
+            <h2 className="text-lg font-bold truncate flex-1">
+              {id === "new" ? "Create Model" : config.name || "Configure Model"}
             </h2>
           </div>
-          <div className="hidden md:block">
-            <ArrowLeft
+
+          <div className="flex w-full px-4 pb-0">
+            <button
+              onClick={() => setActiveTab("config")}
+              className={`flex-1 pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "config"
+                  ? "border-blue-500 text-blue-400"
+                  : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
+            >
+              Configuration
+            </button>
+            <button
+              onClick={() => setActiveTab("preview")}
+              className={`flex-1 pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "preview"
+                  ? "border-blue-500 text-blue-400"
+                  : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
+            >
+              Test Agent
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Header for Config (hidden on mobile) */}
+      <div className={`
+        ${isMobile ? (activeTab === "config" ? "flex" : "hidden") : "flex w-1/3"} 
+        flex-col bg-slate-900 border-r border-slate-800 h-full overflow-hidden
+      `}>
+        {/* Desktop Title */}
+        <div className="hidden md:flex p-6 flex-col gap-2 flex-shrink-0 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <button 
               onClick={() => navigate("/admin?navOption=models")}
-              className="text-white mt-1 cursor-pointer"
-            />
+              className="hover:bg-slate-800 p-1 rounded-full transition-colors"
+            >
+              <ArrowLeft className="text-white w-5 h-5" />
+            </button>
             {id === "new" ? (
-              <h2 className="text-2xl font-bold">Create Nova 1000 AI Agent</h2>
+              <h2 className="text-xl font-bold">Create Agent</h2>
             ) : (
-              <h2 className="text-2xl font-bold">Configure {config.name}</h2>
+                <h2 className="text-xl font-bold truncate">Configure {config.name}</h2>
             )}
           </div>
         </div>
 
-        {/* Scrollable form */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-hide">
+        {/* Scrollable Form */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-700">
           <label className="block">
-            <span className="block mb-1 font-medium">Agent Name</span>
+            <span className="block mb-1 font-medium text-slate-300">Agent Name</span>
             <input
               type="text"
               name="name"
               value={config.name}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
               placeholder="e.g. ACE Engineer"
             />
           </label>
           <label className="block">
-            <span className="block mb-1 font-medium">
+            <span className="block mb-1 font-medium text-slate-300">
               Description
               <InfoNote title="Description / Greeting">
                 <div className="space-y-2">
@@ -372,10 +355,6 @@ const AIModelConfig = () => {
                     I’m the ParkBlockX assistant—ask me about AI pricing, IoT
                     detection, and the NOVA Fund.”
                   </p>
-                  <p className="text-slate-400">
-                    This does <em>not</em> affect model behavior—use{" "}
-                    <strong>Instructions</strong> for that.
-                  </p>
                 </div>
               </InfoNote>
             </span>
@@ -383,14 +362,14 @@ const AIModelConfig = () => {
               name="description"
               value={config.description}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
               rows={3}
               placeholder="Describe in 1 or 2 sentences what this AI agent does..."
             />
           </label>
 
           <label className="block">
-            <span className="block mb-1 font-medium">
+            <span className="block mb-1 font-medium text-slate-300">
               Instructions
               <InfoNote title="Instructions / System Prompt">
                 <div className="space-y-2">
@@ -399,160 +378,111 @@ const AIModelConfig = () => {
                     <em>personality, goals, and boundaries</em>. It’s sent as
                     the system prompt at the start of every chat.
                   </p>
-                  <ul className="list-disc ml-5 space-y-1">
-                    <li>Use clear, direct language—avoid long essays.</li>
-                    <li>
-                      Tell the model how to behave (e.g., “You are ParkBlockX
-                      Assistant. Be concise, accurate, and cite data.”)
-                    </li>
-                    <li>
-                      Include limits: “If information isn’t in context, say you
-                      don’t know.”
-                    </li>
-                  </ul>
-                  <p className="text-slate-400">
-                    <strong>Tip:</strong> This prompt directly shapes every
-                    answer. Keep it short (under ~200 words) and task-focused.
-                  </p>
                 </div>
               </InfoNote>
             </span>
-
             <textarea
               name="apiConfig.systemPrompt"
               value={config.apiConfig.systemPrompt}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
-              rows={3}
-              placeholder="Example: You are ACE Enhineer that thinks 1000x dimensionally building out NXQ licensed patents..."
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all font-mono text-sm"
+              rows={8}
+              placeholder="You are NOVA 1000™..."
             />
           </label>
 
-          <label className="block">
-            <span className="block mb-1 font-medium">
-              Temperature
-              <InfoNote title="Temperature">
-                <div className="space-y-2">
-                  <p>
-                    <strong>What it does:</strong> Controls
-                    randomness/creativity.
-                  </p>
-                  <ul className="list-disc ml-5 space-y-1">
-                    <li>
-                      <strong>0.0–0.3</strong>: concise, deterministic (best for
-                      docs/RAG)
-                    </li>
-                    <li>
-                      <strong>0.4–0.7</strong>: balanced, a bit more variety
-                    </li>
-                    <li>
-                      <strong>0.8–1.0</strong>: creative/expansive (risk of
-                      drift)
-                    </li>
-                  </ul>
-                  <p className="text-slate-400">
-                    For your use case, try <strong>0.2–0.3</strong>.
-                  </p>
-                </div>
-              </InfoNote>
-            </span>
-            <input
-              type="number"
-              name="apiConfig.temperature"
-              min={0}
-              max={1}
-              step={0.01}
-              value={config.apiConfig.temperature}
-              onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-4">
+            <label className="block">
+              <span className="block mb-1 font-medium text-slate-300">
+                Temperature
+              </span>
+              <input
+                type="number"
+                name="apiConfig.temperature"
+                min={0}
+                max={1}
+                step={0.01}
+                value={config.apiConfig.temperature}
+                onChange={handleChange}
+                className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+              />
+            </label>
+
+            <label className="block">
+              <span className="block mb-1 font-medium text-slate-300">
+                Max Tokens
+              </span>
+              <input
+                type="number"
+                name="apiConfig.maxTokens"
+                min={1}
+                max={4096}
+                value={config.apiConfig.maxTokens}
+                onChange={handleChange}
+                className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+              />
+            </label>
+          </div>
 
           <label className="block">
-            <span className="block mb-1 font-medium">
-              Max Tokens
-              <InfoNote title="Max Tokens">
-                <div className="space-y-2">
-                  <p>
-                    <strong>What it does:</strong> Upper bound on the reply
-                    length (in tokens).
-                  </p>
-                  <ul className="list-disc ml-5 space-y-1">
-                    <li>
-                      <strong>~150–300</strong>: short, to-the-point answers
-                    </li>
-                    <li>
-                      <strong>~400–600</strong>: balanced detail
-                    </li>
-                    <li>
-                      <strong>800+ </strong>: long/verbose responses
-                    </li>
-                  </ul>
-                  <p className="text-slate-400">
-                    For concise RAG replies, start at <strong>300</strong>.
-                  </p>
-                </div>
-              </InfoNote>
-            </span>
-            <input
-              type="number"
-              name="apiConfig.maxTokens"
-              min={1}
-              max={4096}
-              value={config.apiConfig.maxTokens}
-              onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
-            />
-          </label>
-
-          <label className="block">
-            <span className="block mb-1 font-medium">Recommended Model</span>
+            <span className="block mb-1 font-medium text-slate-300">Model</span>
             <select
               name="apiConfig.chatModel"
               value={config.apiConfig.chatModel}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
             >
               <option value="gpt-4o-mini">gpt-4o-mini</option>
               <option value="gpt-4o">gpt-4o</option>
               <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
-              {/* Add more OpenAI models as needed */}
             </select>
           </label>
+
           <label className="block">
-            <span className="block mb-1 font-medium">API Key</span>
+            <span className="block mb-1 font-medium text-slate-300">API Key</span>
             <input
               type="password"
               name="apiConfig.apiKey"
               value={config.apiConfig.apiKey}
               onChange={handleChange}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
               placeholder="Enter OpenAI API Key"
             />
           </label>
+
           <label className="block">
-            <span className="block mb-1 font-medium">Knowledge</span>
-            <input
-              type="file"
-              accept=".pdf,.txt,.csv,.json"
-              multiple
-              onChange={handleModelFileSelect}
-              className="w-full border border-slate-700 bg-slate-800 text-white rounded px-3 py-2 text-sm md:text-base"
-            />
+            <span className="block mb-1 font-medium text-slate-300">Knowledge Base</span>
+            <div className="border border-slate-700 border-dashed rounded-xl p-4 bg-slate-800/50 text-center">
+              <input
+                type="file"
+                accept=".pdf,.txt,.csv,.json"
+                multiple
+                onChange={handleModelFileSelect}
+                className="hidden"
+                id="knowledge-upload"
+              />
+              <label htmlFor="knowledge-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                <div className="bg-slate-700 p-2 rounded-full">
+                  <Plus className="w-5 h-5 text-blue-400" />
+                </div>
+                <span className="text-sm text-slate-400">Click to upload files</span>
+              </label>
+            </div>
+
             {modelFiles.length > 0 && (
-              <div className="mt-2 space-y-2">
+              <div className="mt-3 space-y-2">
                 {modelFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center space-x-2 bg-slate-800 p-2 rounded"
+                    className="flex items-center space-x-2 bg-slate-800 p-2.5 rounded-lg border border-slate-700"
                   >
                     {getFileIcon(file.mimetype || file.type)}
-                    <span className="text-sm truncate">
+                    <span className="text-sm truncate flex-1 text-slate-300">
                       {file.filename || file.name}
                     </span>
                     <button
                       onClick={() => removeModelFile(index)}
-                      className="text-red-500"
+                      className="text-slate-500 hover:text-red-400 p-1"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -563,60 +493,65 @@ const AIModelConfig = () => {
           </label>
         </div>
 
-        {/* Save button (fixed at bottom) */}
-        <div className="p-4 md:p-6 flex-shrink-0 border-t border-slate-800">
+        {/* Save button (fixed) */}
+        <div className="p-4 md:p-6 flex-shrink-0 border-t border-slate-800 bg-slate-900 z-10">
           <button
-            className="w-full px-4 py-2 flex justify-center items-center bg-blue-600 text-white rounded hover:bg-blue-700 text-sm md:text-base"
+            className="w-full px-6 py-3 flex justify-center items-center bg-blue-600 text-white rounded-xl hover:bg-blue-500 text-sm md:text-base font-semibold transition-all shadow-lg shadow-blue-900/20 active:scale-[0.98]"
             onClick={handleSave}
+            disabled={isSaving}
           >
             {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              "Save Config"
+                "Save Configuration"
             )}
           </button>
         </div>
       </div>
 
-      {/* Overlay for mobile config panel */}
-      {isMobile && isConfigOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
-          onClick={() => setIsConfigOpen(false)}
-        />
-      )}
-
       {/* Right: Playground Section */}
-      <div className="w-full md:w-2/3 flex flex-col bg-[#020617] h-screen">
-        {/* Header (fixed at top) */}
-        <div className="px-4 py-4 flex flex-col items-center justify-center">
-          <div className="mb-3 sm:mb-4">
+      <div className={`
+        ${isMobile ? (activeTab === "preview" ? "flex" : "hidden") : "flex w-2/3"} 
+        flex-col bg-[#020617] h-full relative
+      `}>
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-blue-500/5 pointer-events-none" />
+
+        {/* Header */}
+        <div className="px-4 py-6 flex flex-col items-center justify-center flex-shrink-0 relative z-10">
+          <div className="mb-4">
             <CircularWaveform
               isActive={false || isSpeaking || isProcessing}
               isUserInput={false && !isSpeaking}
               audioLevel={
                 false ? audioLevel : isSpeaking ? Math.random() * 0.8 + 0.2 : 0
               }
-              size={isMobile ? 120 : 165}
+              size={isMobile ? 100 : 140}
               className="mx-auto"
             />
           </div>
           <div className="text-center">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-light tracking-wider text-white">
+            <h1 className="text-xl md:text-3xl font-light tracking-wider text-white">
               NOVA 1000
-              <span className="text-xs sm:text-sm align-top ml-1 text-gray-400">
+              <span className="text-xs align-top ml-1 text-blue-500 font-bold">
                 ™
               </span>
             </h1>
+            <p className="text-xs text-slate-500 mt-2 uppercase tracking-widest">Preview Mode</p>
           </div>
         </div>
 
-        {/* Messages (scrollable area) */}
+        {/* Messages */}
         <div
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto px-2 md:px-4 py-2 scrollbar-hide"
+          className="flex-1 overflow-y-auto px-4 py-2 scrollbar-thin scrollbar-thumb-slate-800 relative z-10"
         >
-          <div className="flex flex-col space-y-4">
+          <div className="flex flex-col space-y-4 max-w-3xl mx-auto pb-4">
+            {messages.length === 0 && (
+              <div className="text-center text-slate-600 mt-10 text-sm">
+                Test your agent configuration here.
+              </div>
+            )}
             {messages.map((message) => (
               <ChatMessage
                 key={message._id || message.timestamp.toString()}
@@ -628,19 +563,19 @@ const AIModelConfig = () => {
             ))}
 
             {isProcessing && (
-              <div className="flex justify-end mb-6">
-                <div className="bg-slate-800/80 px-4 py-3 rounded-2xl max-w-xs">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100" />
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200" />
+              <div className="flex justify-start mb-6">
+                <div className="bg-slate-900 border border-slate-800 px-4 py-3 rounded-2xl">
+                  <div className="flex space-x-1.5">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" />
                   </div>
                 </div>
               </div>
             )}
 
             {errorMessage && (
-              <div className="text-red-400 text-sm bg-slate-800/70 rounded-lg p-2 text-center">
+              <div className="text-red-400 text-sm bg-red-950/30 border border-red-500/20 rounded-xl p-3 text-center">
                 {errorMessage}
               </div>
             )}
@@ -650,54 +585,54 @@ const AIModelConfig = () => {
         </div>
 
         {/* Input Section */}
-        <div className="flex-shrink-0 flex px-2 pb-4 sm:pb-4">
-          <div className="flex items-center mb-2 space-x-3">
-            <label
-              className="p-2 rounded-xl cursor-pointer text-gray-400 hover:text-white transition-all duration-200"
-              title="Upload files"
-            >
-              <input
-                type="file"
-                accept="*"
-                multiple
-                style={{ display: "none" }}
-                onChange={handleFileSelect}
-                disabled={isProcessing}
-              />
-              <Plus className="w-5 h-5" />
-            </label>
-          </div>
-          <div className="mb-2 flex flex-col flex-1 space-y-2">
+        <div className="flex-shrink-0 flex px-4 pb-6 pt-2 relative z-10">
+          <div className="max-w-3xl mx-auto w-full flex flex-col gap-3">
+            {/* File Pills */}
             {selectedFiles.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
+              <div className="flex flex-wrap gap-2">
                 {selectedFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center space-x-2 bg-slate-800/70 rounded-xl p-2"
-                  >
-                    {getFileIcon(file.type)}
-                    <span className="text-sm text-gray-300 truncate max-w-[100px] md:max-w-[150px]">
-                      {file.name}
-                    </span>
-                    <button
-                      onClick={() => removeSelectedFile(index)}
-                      className="text-red-500"
-                      disabled={isSending}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                        className="flex items-center space-x-2 bg-slate-800 rounded-lg p-2 border border-slate-700"
+                      >
+                        {getFileIcon(file.type)}
+                        <span className="text-xs text-slate-300 truncate max-w-[100px]">
+                          {file.name}
+                        </span>
+                        <button
+                          onClick={() => removeSelectedFile(index)}
+                          className="text-slate-500 hover:text-red-400"
+                          disabled={isSending}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
               </div>
             )}
-            <div className="flex items-center space-x-2">
+
+            <div className="flex items-center gap-3">
+              <label
+                className="p-3 rounded-xl cursor-pointer text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                title="Upload files"
+              >
+                <input
+                  type="file"
+                  accept="*"
+                  multiple
+                  style={{ display: "none" }}
+                  onChange={handleFileSelect}
+                  disabled={isProcessing}
+                />
+                <Plus className="w-5 h-5" />
+              </label>
               <TextInput
                 onSubmit={
                   selectedFiles.length > 0
                     ? () => handleSendFilePrompt(inputValue)
                     : () => handleSendMessage(inputValue)
                 }
-                placeholder="Message NOVA 1000™"
+                placeholder="Test your agent..."
                 disabled={isProcessing || isSending}
                 value={inputValue}
                 setValue={setInputValue}

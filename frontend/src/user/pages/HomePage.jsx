@@ -12,6 +12,7 @@ import {
   X,
   Send,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import ChatSidebar from "../components/ChatSidebar";
 import { LoadingScreen } from "../components/LoadingScreen";
@@ -109,18 +110,30 @@ function HomePage() {
 
   // Auto-scroll to bottom when messages change or processing
   useEffect(() => {
-    if (messagesEndRef.current) {
-      // Use setTimeout to ensure DOM has updated
+    const scrollToBottom = (behavior = "smooth") => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior, block: "end" });
+      }
+    };
+
+    // Immediate scroll for first load
+    if (isFirstLoadRef.current && chatMessages.length > 0) {
       setTimeout(() => {
-        if (messagesEndRef.current) {
-          // Use instant scroll for initial load, smooth for new messages
-          const behavior = isFirstLoadRef.current ? "auto" : "smooth";
-          messagesEndRef.current.scrollIntoView({ behavior });
-          isFirstLoadRef.current = false;
-        }
+        scrollToBottom("auto");
+        isFirstLoadRef.current = false;
       }, 100);
+    } else {
+      // Smooth scroll for new messages
+      scrollToBottom("smooth");
     }
   }, [chatMessages, isProcessing]);
+
+  // Handle global stop voice
+  const handleStopVoice = () => {
+    window.dispatchEvent(new CustomEvent("nova-stop-voice"));
+    setIsSpeaking(false);
+  };
+
   const mergedConversations = [...(conversations || []), ...localConversations];
 
   // Filter conversations by selected model
@@ -145,6 +158,7 @@ function HomePage() {
 
   const handleSelectChat = (chatId) => {
     setSelectedChatId(chatId);
+    isFirstLoadRef.current = true; // Trigger auto-scroll on chat switch
     if (!isDesktop) setIsSidebarOpen(false);
   };
 
@@ -350,8 +364,24 @@ function HomePage() {
     <>
       <div
         className="h-screen bg-slate-950 text-white flex flex-col overflow-hidden"
-        style={{ height: "100vh" }}
+        style={{ height: "100dvh" }}
       >
+        {/* Voice Stop Overlay - Fixed at top */}
+        {isSpeaking && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in zoom-in duration-300">
+            <button
+              onClick={handleStopVoice}
+              className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-full shadow-2xl flex items-center gap-2 font-medium transition-all hover:scale-105 active:scale-95 border border-red-400/20 text-sm"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+              </span>
+              Stop Speaking
+            </button>
+          </div>
+        )}
+
         {/* Mobile Hamburger Menu */}
         {!isDesktop && (
           <div className="fixed top-0 left-0 z-40 p-3">
@@ -560,7 +590,7 @@ function HomePage() {
                       onClick={() => setIsMenuOpen(true)}
                       className="p-1.5 md:p-2 text-gray-400 hover:text-white transition-colors"
                     >
-                      <Menu className="w-4 h-4 md:w-5 md:h-5" />
+                      <Menu className="w-4 h-4 md:w-5 h-5" />
                     </button>
                   </div>
                   <div
@@ -635,6 +665,7 @@ function HomePage() {
           </div>
         </div>
       </div>
+
       <MenuOverlay
         handleNavigateToVoiceMode={handleNavigateToVoiceMode}
         isOpen={isMenuOpen}
@@ -642,6 +673,8 @@ function HomePage() {
       />
     </>
   );
+
+
 }
 
 export default HomePage;

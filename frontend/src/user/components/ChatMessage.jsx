@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useState, useRef } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
@@ -23,22 +23,30 @@ export const ChatMessage = ({
       return <FileText className="w-4 h-4 md:w-5 md:h-5" />;
     return <FileIcon className="w-4 h-4 md:w-5 md:h-5" />;
   };
+  useEffect(() => {
+    const handleStop = () => {
+      if (isPlaying && audioRef.current) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+        setIsSpeaking(false);
+      }
+    };
+    window.addEventListener("nova-stop-voice", handleStop);
+    return () => window.removeEventListener("nova-stop-voice", handleStop);
+  }, [isPlaying, setIsSpeaking]);
+
   return (
     <div
       className={`flex ${
         isUser ? "justify-start" : "justify-end"
-      } mb-4 md:mb-6`}
+        } mb-4 md:mb-6 animate-in fade-in slide-in-from-bottom-2 duration-300`}
     >
       <div
-        className={`max-w-[85%] md:max-w-md px-3 py-2 md:px-4 md:py-3 rounded-2xl backdrop-blur-sm border relative ${
+        className={`max-w-[85%] md:max-w-md px-3 py-2 md:px-4 md:py-3 rounded-2xl backdrop-blur-md border relative shadow-sm ${
           isUser
-            ? isPlaying
-              ? "bg-slate-900/90 text-white border-slate-700/50"
-              : "bg-slate-800/80 text-white border-slate-700/50"
-            : isPlaying
-            ? "bg-slate-900/90 text-white border-slate-700/50"
-            : "bg-slate-800/80 text-white border-slate-700/50"
-        }`}
+            ? "bg-slate-800/80 text-white border-slate-700/50"
+            : "bg-slate-900/60 text-white border-slate-800/50 shadow-blue-900/10"
+          } ${isPlaying ? "ring-2 ring-blue-500/50" : ""}`}
       >
         {attachments?.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2 space-y-2">
