@@ -15,14 +15,14 @@ const ProtectRoutes = () => {
     // Email exists in URL & no user logged in → Login with email
     return <Navigate to="/login" state={{ email, from: location }} replace />;
   }
-  if (user?.role !== "user") {
-    return <Navigate to="/admin" replace />;
-  }
-    // If either:
-    // - user exists and email doesn't matter
-    // - email exists and user exists
-    // Then allow access
-    return <Outlet />;
+  // if (user?.role !== "user") {
+  //   return <Navigate to="/admin" replace />;
+  // }
+  // If either:
+  // - user exists and email doesn't matter
+  // - email exists and user exists
+  // Then allow access
+  return <Outlet />;
 };
 
 export default ProtectRoutes;
