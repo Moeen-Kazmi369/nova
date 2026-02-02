@@ -13,6 +13,7 @@ import {
   Send,
   Loader2,
   MessageSquare,
+  Globe,
 } from "lucide-react";
 import ChatSidebar from "../components/ChatSidebar";
 import { LoadingScreen } from "../components/LoadingScreen";
@@ -42,6 +43,7 @@ function HomePage() {
   const [isDeletingChatId, setIsDeletingChatId] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   // Placeholder states for voice features (unchanged)
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -296,6 +298,7 @@ function HomePage() {
       promptData.append("prompt", text);
       promptData.append("aiModelId", selectedModel?._id);
       if (selectedChatId) promptData.append("conversationId", selectedChatId);
+      promptData.append("webSearch", isWebSearchEnabled);
       selectedFiles.forEach((file) => {
         promptData.append("files", file);
       });
@@ -575,9 +578,24 @@ function HomePage() {
                       />
                       <Plus className="w-4 h-4 md:w-5 md:h-5" />
                     </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsWebSearchEnabled(!isWebSearchEnabled)}
+                      className={`p-2 rounded-xl transition-all duration-200 ${isWebSearchEnabled
+                          ? "text-blue-400 bg-blue-500/10"
+                          : "text-gray-400 hover:text-white"
+                        }`}
+                      title={
+                        isWebSearchEnabled ? "Disable Web Search" : "Enable Web Search"
+                      }
+                    >
+                      <Globe className="w-4 h-4 md:w-5 md:h-5" />
+                    </button>
                     <TextInput
                       onSubmit={() => handleSendMessage(inputValue)}
-                      placeholder="Message NOVA 1000™"
+                      placeholder={
+                        isWebSearchEnabled ? "Ask Web..." : "Message NOVA 1000™"
+                      }
                       disabled={isProcessing || isSending || !selectedModel}
                       value={inputValue}
                       setValue={setInputValue}
