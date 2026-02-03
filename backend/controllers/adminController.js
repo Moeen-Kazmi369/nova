@@ -7,7 +7,6 @@ const { getImageDescription } = require("../utils/imageDescription.js"); // simi
 const supabase = require("../config/supabase");
 const openaiClient = require("../config/openai");
 const openai = require("openai");
-const { performWebSearch } = require("../utils/webSearch");
 // Setup multer for file uploads - max 3 files
 const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max file size each
@@ -412,76 +411,15 @@ exports.adminPlaygroundTextChat = async (req, res) => {
 
       messages.push({ role: "user", content: prompt });
 
-      let requestPayload = {
+      const completion = await openaiClient.chat.completions.create({
         model: model.apiConfig?.chatModel || "gpt-4o-mini",
         messages,
         max_tokens: maxTokens,
         temperature,
-      };
+      });
 
-      let useWebSearch = req.body.webSearch === 'true' || req.body.webSearch === true;
-
-      // Custom Web Search Tool Definition
-      const tools = [
-        {
-          type: "function",
-          function: {
-            name: "perform_web_search",
-            description: "Search the web for real-time information, news, prices, etc.",
-            parameters: {
-              type: "object",
-              properties: {
-                query: {
-                  type: "string",
-                  description: "The search query",
-                },
-              },
-              required: ["query"],
-            },
-          },
-        },
-      ];
-
-      if (useWebSearch) {
-        requestPayload.tools = tools;
-        requestPayload.tool_choice = "auto";
-      }
-
-      console.log(`[AdminPlayground] Calling OpenAI with Web Search: ${useWebSearch}`);
-
-      let completion = await openaiClient.chat.completions.create(requestPayload);
-      let message = completion.choices[0].message;
-
-      // Handle function tool calls
-      if (message.tool_calls && message.tool_calls.length > 0) {
-        const toolCall = message.tool_calls[0];
-        if (toolCall.function.name === "perform_web_search") {
-          const { query } = JSON.parse(toolCall.function.arguments);
-          console.log(`[AdminPlayground] Triggered search for: ${query}`);
-          
-          const searchResults = await performWebSearch(query);
-          
-          // Append assistant's tool call and the tool output to messages
-          messages.push(message);
-          messages.push({
-            role: "tool",
-            tool_call_id: toolCall.id,
-            content: searchResults,
-          });
-
-          // Call OpenAI again with the search results
-          const secondResponse = await openaiClient.chat.completions.create({
-            model: requestPayload.model,
-            messages,
-            max_tokens: maxTokens,
-            temperature,
-          });
-          
-          message = secondResponse.choices[0].message;
-        }
-      }
-
-      const reply = message.content || "No response generated";
+      const reply =
+        completion.choices[0].message?.content || "No response generated";
       res.json({ reply });
     } catch (err) {
       console.error("adminPlaygroundTextChat error:", err);

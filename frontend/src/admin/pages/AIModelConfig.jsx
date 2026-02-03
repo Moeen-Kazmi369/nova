@@ -10,7 +10,6 @@ import {
   FileIcon,
   X,
   ArrowLeft,
-  Globe,
 } from "lucide-react";
 import { TextInput } from "../components/TextInput";
 import {
@@ -84,7 +83,6 @@ const AIModelConfig = () => {
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [modelFiles, setModelFiles] = useState([]);
-  const [isWebSearchEnabled, setIsWebSearchEnabled] = useState(false);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const navigate = useNavigate();
@@ -204,7 +202,6 @@ const AIModelConfig = () => {
       const promptData = new FormData();
       promptData.append("prompt", text);
       promptData.append("modelId", id);
-      promptData.append("webSearch", isWebSearchEnabled);
       selectedFiles.forEach((file) => {
         promptData.append("files", file);
       });
@@ -233,7 +230,6 @@ const AIModelConfig = () => {
       const promptData = new FormData();
       promptData.append("prompt", prompt);
       promptData.append("modelId", id);
-      promptData.append("webSearch", isWebSearchEnabled);
       selectedFiles.forEach((file) => {
         promptData.append("files", file);
       });
@@ -630,19 +626,6 @@ const AIModelConfig = () => {
                 />
                 <Plus className="w-5 h-5" />
               </label>
-              <button
-                type="button"
-                onClick={() => setIsWebSearchEnabled(!isWebSearchEnabled)}
-                className={`p-3 rounded-xl transition-all ${isWebSearchEnabled
-                    ? "text-blue-400 bg-blue-500/10"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800"
-                  }`}
-                title={
-                  isWebSearchEnabled ? "Disable Web Search" : "Enable Web Search"
-                }
-              >
-                <Globe className="w-5 h-5" />
-              </button>
               <TextInput
                 onSubmit={
                   selectedFiles.length > 0
