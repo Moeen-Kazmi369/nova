@@ -19,6 +19,18 @@ const aiModelSchema = new mongoose.Schema({
   files: [fileSchema], // up to 3 text files with extracted text content
   fullTextContent: String, // concatenated text from all files (optional)
   status: { type: String, enum: ["active", "inactive"], default: "active" },
+
+  // New fields
+  agentType: String,
+  ownerName: String,
+  ownerTitle: String,
+  jurisdiction: String,
+  time: String,
+  mission: String,
+  covenant: String,
+  polygon: String,
+  xrpl: String,
+
   createdAt: { type: Date, default: Date.now },
   updatedAt: Date,
 });

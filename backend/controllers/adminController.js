@@ -28,7 +28,20 @@ exports.createAIModel = async (req, res) => {
     if (err) return res.status(400).json({ message: err.message });
 
     try {
-      const { name, description, apiConfig } = req.body;
+      const {
+        name,
+        description,
+        apiConfig,
+        agentType,
+        ownerName,
+        ownerTitle,
+        jurisdiction,
+        time,
+        mission,
+        covenant,
+        polygon,
+        xrpl,
+      } = req.body;
       const ownerAdmin = req.user.id;
 
       let filesData = [];
@@ -60,6 +73,15 @@ exports.createAIModel = async (req, res) => {
         apiConfig: JSON.parse(apiConfig || "{}"),
         files: filesData,
         fullTextContent,
+        agentType,
+        ownerName,
+        ownerTitle,
+        jurisdiction,
+        time,
+        mission,
+        covenant,
+        polygon,
+        xrpl,
       });
 
       await newModel.save();

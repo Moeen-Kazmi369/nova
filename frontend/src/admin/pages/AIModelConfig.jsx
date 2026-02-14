@@ -10,6 +10,15 @@ import {
   FileIcon,
   X,
   ArrowLeft,
+  User,
+  Briefcase,
+  Globe,
+  Clock,
+  Target,
+  Shield,
+  Activity,
+  Zap,
+  Users,
 } from "lucide-react";
 import { TextInput } from "../components/TextInput";
 import {
@@ -62,6 +71,15 @@ function InfoNote({ title, children }) {
 const initialConfig = {
   name: "",
   description: "",
+  agentType: "dimensional",
+  ownerName: "",
+  ownerTitle: "",
+  jurisdiction: "",
+  time: "",
+  mission: "",
+  covenant: "",
+  polygon: "",
+  xrpl: "",
   apiConfig: {
     systemPrompt: "",
     temperature: 0.7,
@@ -104,6 +122,15 @@ const AIModelConfig = () => {
         setConfig({
           name: model.name,
           description: model.description,
+          agentType: model.agentType || "dimensional",
+          ownerName: model.ownerName || "",
+          ownerTitle: model.ownerTitle || "",
+          jurisdiction: model.jurisdiction || "",
+          time: model.time || "",
+          mission: model.mission || "",
+          covenant: model.covenant || "",
+          polygon: model.polygon || "",
+          xrpl: model.xrpl || "",
           apiConfig: model.apiConfig || initialConfig.apiConfig,
         });
         // Assuming model.files is array of {filename, mimetype}
@@ -150,6 +177,15 @@ const AIModelConfig = () => {
       const modelData = new FormData();
       modelData.append("name", config.name);
       modelData.append("description", config.description);
+      modelData.append("agentType", config.agentType);
+      modelData.append("ownerName", config.ownerName);
+      modelData.append("ownerTitle", config.ownerTitle);
+      modelData.append("jurisdiction", config.jurisdiction);
+      modelData.append("time", config.time);
+      modelData.append("mission", config.mission);
+      modelData.append("covenant", config.covenant);
+      modelData.append("polygon", config.polygon);
+      modelData.append("xrpl", config.xrpl);
       modelData.append("apiConfig", JSON.stringify(config.apiConfig));
       console.log(modelFiles);
       modelFiles.forEach((file) => {
@@ -447,6 +483,160 @@ const AIModelConfig = () => {
               onChange={handleChange}
               className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
               placeholder="Enter OpenAI API Key"
+            />
+          </label>
+
+          <label className="block">
+            <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
+              <Users className="w-4 h-4 text-cyan-400" />
+              Agent Type
+            </span>
+            <select
+              name="agentType"
+              value={config.agentType}
+              onChange={handleChange}
+              className="w-full p-3 rounded-2xl bg-[#041121] border border-cyan-700/40 text-cyan-100 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-300/70"
+            >
+              <option value="dimensional">Dimensional Agent</option>
+              <option value="enterprise">Enterprise Agent</option>
+              <option value="civilian">Civilian Agent</option>
+              <option value="twin">Dimensional Twin Agent</option>
+              <option value="medical">Medical Agent</option>
+              <option value="defense">Defense Agent</option>
+              <option value="space">Space Agent</option>
+              <option value="fintech">FinTech Agent</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
+              <User className="w-4 h-4 text-cyan-400" />
+              Owner NAME
+            </span>
+            <input
+              type="text"
+              name="ownerName"
+              value={config.ownerName}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+              placeholder="e.g. Human or Company Name"
+            />
+          </label>
+
+          <label className="block">
+            <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
+              <Briefcase className="w-4 h-4 text-cyan-400" />
+              Owner title
+            </span>
+            <input
+              type="text"
+              name="ownerTitle"
+              value={config.ownerTitle}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+              placeholder="e.g. Human Name, Operations Lead, Founder, or Team Manager"
+            />
+          </label>
+
+          <label className="block">
+            <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
+              <Globe className="w-4 h-4 text-cyan-400" />
+              Jurisdiction (Country / Region)
+            </span>
+            <input
+              type="text"
+              name="jurisdiction"
+              value={config.jurisdiction}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+              placeholder="e.g. USA, EU, Singapore, UAE…"
+            />
+          </label>
+
+          <label className="block">
+            <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
+              <ImageIcon className="w-4 h-4 text-cyan-400" />
+              Company logo
+            </span>
+            <input
+              type="file"
+              disabled
+              className="w-full border border-slate-700 bg-slate-800/50 text-slate-500 rounded-xl px-4 py-2.5 cursor-not-allowed"
+            />
+          </label>
+
+          <label className="block">
+            <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
+              <Clock className="w-4 h-4 text-cyan-400" />
+              TIME
+            </span>
+            <input
+              type="text"
+              name="time"
+              value={config.time}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+              placeholder="TIME"
+            />
+          </label>
+
+          <label className="block">
+            <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
+              <Target className="w-4 h-4 text-cyan-400" />
+              MISSION
+            </span>
+            <textarea
+              name="mission"
+              value={config.mission}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+              rows={2}
+              placeholder="Describe what this agents purpose and mission is…"
+            />
+          </label>
+
+          <label className="block">
+            <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
+              <Shield className="w-4 h-4 text-cyan-400" />
+              COVENANT
+            </span>
+            <input
+              type="text"
+              name="covenant"
+              value={config.covenant}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+              placeholder="COVENANT"
+            />
+          </label>
+
+          <label className="block">
+            <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
+              <Activity className="w-4 h-4 text-cyan-400" />
+              Polygon
+            </span>
+            <input
+              type="text"
+              name="polygon"
+              value={config.polygon}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+              placeholder="Polygon"
+            />
+          </label>
+
+          <label className="block">
+            <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
+              <Zap className="w-4 h-4 text-cyan-400" />
+              XRPL
+            </span>
+            <input
+              type="text"
+              name="xrpl"
+              value={config.xrpl}
+              onChange={handleChange}
+              className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
+              placeholder="XRPL"
             />
           </label>
 
