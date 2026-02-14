@@ -146,12 +146,38 @@ body {
     padding-bottom: 100px;
   }
 }
-/* Custom Scrollbar for overflow containers */
+
+/* Custom Scrollbar Styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(30, 41, 59, 0.5) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(30, 41, 59, 0.5); /* Slate-800 with opacity */
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(51, 65, 85, 0.8); /* Slate-700 with more opacity */
+}
+
+/* Specific class for custom scrolling if needed */
 .custom-scroll::-webkit-scrollbar {
   width: 4px;
 }
 .custom-scroll::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.3);
+  background-color: rgba(59, 130, 246, 0.3); /* Blue-500 with opacity */
   border-radius: 9999px;
 }
 .custom-scroll::-webkit-scrollbar-track {

@@ -268,7 +268,7 @@ export default function Dashboard() {
 
         {/* Page content - Fixed height with scrollable content */}
         <main className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scroll">
             {selectedNav === "users" ? (
               <div className="space-y-4">
                 {isUsersLoading ? (
