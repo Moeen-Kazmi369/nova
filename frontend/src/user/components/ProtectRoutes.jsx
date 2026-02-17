@@ -8,7 +8,7 @@ const ProtectRoutes = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   if (!email && !user) {
     // No email in URL & no logged in user → Access Denied
-    return <Navigate to="/access-denied" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (email && !user) {
