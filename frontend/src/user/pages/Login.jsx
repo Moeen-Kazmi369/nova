@@ -144,7 +144,7 @@ const Login = () => {
               Click here
             </Link>
           </p>
-          <p className="mt-2 text-center text-sm text-gray-300">
+          {/* <p className="mt-2 text-center text-sm text-gray-300">
             Don't have an account?{" "}
             <Link
               to={`/register?redirect=${encodeURIComponent(redirect)}`}
@@ -152,7 +152,7 @@ const Login = () => {
             >
               Register
             </Link>
-          </p>
+          </p> */}
         </form>
       </div>
     </div>
