@@ -403,7 +403,12 @@ exports.adminPlaygroundTextChat = async (req, res) => {
       // 3) Build messages: system → context blocks → (optional) history → user
       const systemPrompt =
         model.apiConfig?.systemPrompt ||
-        "You are a careful assistant. Use the CONTEXT if relevant; if not, say you don't know.";
+        `You are a careful assistant. Use the CONTEXT if relevant; if not, say you don't know.
+
+**Agent Capabilities:**
+- You can analyze and summarize images.
+- You are available for both text-based chat and real-time voice conversations.
+- Respond naturally and conversationally in all interactions.`;
       const temperature = model.apiConfig?.temperature ?? 0.2;
       const maxTokens = model.apiConfig?.maxTokens ?? 1000;
 

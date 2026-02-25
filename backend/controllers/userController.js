@@ -85,23 +85,26 @@ exports.userTextPrompt = async (req, res) => {
 
       // Process uploaded files: extract text or image description
       let ragContext = "";
+      let imageDescriptions = "";
       if (req.files && req.files.length > 0) {
         for (const file of req.files) {
           let content = "";
           if (file.mimetype === "application/pdf") {
             content = await parsePDF(file.buffer);
+            ragContext += "\n" + content;
           } else if (
             ["text/plain", "text/csv", "application/json"].includes(
-              file.mimetype
+              file.mimetype,
             )
           ) {
             content = await parseTxtCsvJson(file.buffer);
+            ragContext += "\n" + content;
           } else if (
             ["image/jpeg", "image/png", "image/webp"].includes(file.mimetype)
           ) {
             content = await getImageDescription(openaiClient, file.buffer);
+            imageDescriptions += "\n" + content;
           }
-          ragContext += "\n" + content;
         }
       }
 
@@ -137,6 +140,16 @@ Always write responses in **GitHub-flavored Markdown**:
 - For code, use fenced blocks with language hints, e.g. \`\`\`js, \`\`\`ts, \`\`\`bash.
 - Prefer concise sections with clear formatting.
 
+**About Images and Attachments:**
+- When users upload images, you receive analyzed descriptions of those images.
+- Refer to the "ANALYZED IMAGES" section for these descriptions.
+- Answer questions about user-uploaded images based on these descriptions.
+
+**Agent Capabilities:**
+- You can analyze and summarize images shared by users.
+- You are available for both text-based chat and real-time voice conversations.
+- Respond naturally and conversationally in all interactions.
+
 ${model.apiConfig?.systemPrompt || "You are a helpful assistant."}
 `;
 
@@ -158,17 +171,24 @@ ${model.apiConfig?.systemPrompt || "You are a helpful assistant."}
         });
       }
 
+      if (imageDescriptions.trim()) {
+        messages.push({
+          role: "assistant",
+          content: `ANALYZED IMAGES (These are images you've already analyzed):\n----\n${imageDescriptions}\n----`,
+        });
+      }
+
       if (ragContext.trim()) {
         messages.push({
           role: "assistant",
-          content: `ADDITIONAL USER DOCUMENTS:\n----\n${ragContext}\n----`,
+          content: `ADDITIONAL DOCUMENTS:\n----\n${ragContext}\n----`,
         });
       }
 
       // 1) recent history first
       if (effectiveConversationId) {
         const conversation = await Conversation.findById(
-          effectiveConversationId
+          effectiveConversationId,
         );
         // ... error handling
         const userMessages = conversation.messages
@@ -203,7 +223,7 @@ ${model.apiConfig?.systemPrompt || "You are a helpful assistant."}
         // Generate conversation name from first user message
         const conversationName = await generateConversationName(
           openaiClient,
-          promptValue
+          promptValue,
         );
 
         conversation = new Conversation({
@@ -302,9 +322,8 @@ exports.getConversationMessagesById = async (req, res) => {
     if (String(conversationId).startsWith("local-")) {
       return res.json([]); // Local placeholder: no messages yet
     }
-    const conversation = await Conversation.findById(conversationId).select(
-      "messages"
-    );
+    const conversation =
+      await Conversation.findById(conversationId).select("messages");
     if (!conversation)
       return res.status(404).json({ message: "Conversation not found" });
 
@@ -452,10 +471,32 @@ exports.elevenLabsLLM = async (req, res) => {
 
     // Optional: tiny extra notes (don’t rely on Mongo body for inference)
     const ragContext = (model.fullTextContent || "").slice(0, 1200);
-
+    // Extract image information from conversation history
+    let imageInfo = "";
+    const allMessages = conversation.messages || [];
+    for (const msg of allMessages) {
+      if (msg.attachments && msg.attachments.length > 0) {
+        const imageAttachments = msg.attachments.filter(
+          (att) => att.mimetype && att.mimetype.includes("image"),
+        );
+        if (imageAttachments.length > 0) {
+          imageInfo += `\n- User shared image(s): ${imageAttachments.map((att) => att.filename).join(", ")}`;
+        }
+      }
+    }
     const systemPrompt =
       model.apiConfig?.systemPrompt +
         `
+      **Image Analysis in Voice Mode:**
+      - When users mention images or ask about previously shared images, refer to the analyzed image descriptions already provided in the ANALYZED IMAGES sections.
+      - These are pre-analyzed images from the current conversation.
+      - Answer questions about these images based on the provided descriptions.
+
+      **Agent Capabilities:**
+      - You can analyze and summarize images shared by users.
+      - You are available for both text-based chat and real-time voice conversations.
+      - Respond naturally and conversationally in both mediums.
+
       **Strict Instruction for Response Generation:**
 
 1.  **NO TRADEMARKS:** When generating any response, you must strictly exclude all trademark, registered, or service mark symbols ($™, ®, SM$) from the specific product name "NOVA 1000".
@@ -477,6 +518,14 @@ exports.elevenLabsLLM = async (req, res) => {
         ].join("\n"),
       });
     }
+
+    if (imageInfo) {
+      msgs.push({
+        role: "assistant",
+        content: `REFERENCED IMAGES IN THIS CONVERSATION:\n----\nImages shared by the user in current conversation:${imageInfo}\n----\nUse the image descriptions provided in the context or refer back to what the user mentioned about these images.`,
+      });
+    }
+
     if (ragContext) {
       msgs.push({
         role: "assistant",
@@ -524,7 +573,7 @@ exports.elevenLabsLLM = async (req, res) => {
       try {
         const conversationName = await generateConversationName(
           openaiClient,
-          prompt
+          prompt,
         );
         if (conversationName) conversation.conversationName = conversationName;
       } catch (e) {
@@ -534,7 +583,7 @@ exports.elevenLabsLLM = async (req, res) => {
 
     conversation.messages.push(
       { sender: "user", text: prompt, attachments: [] },
-      { sender: "ai", text: aiReply, attachments: [] }
+      { sender: "ai", text: aiReply, attachments: [] },
     );
     conversation.updatedAt = new Date();
     await conversation.save();

@@ -659,7 +659,7 @@ function HomePage() {
                 </div>
               </div>
               <div className="flex-shrink-0 px-2 md:px-4 text-center py-1 md:py-2 text-gray-500 text-[10px] md:text-xs">
-                <p>Powered By: DIMENSIONAL INTEGRITY ENGINE & IMMORTAL LOGIC</p>
+                <p>Powered by NOVA X Quantum™️</p>
               </div>
             </div>
           </div>

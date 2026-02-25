@@ -207,10 +207,7 @@ const VoiceModePage = () => {
         </div>
 
         <div className="flex-shrink-0 text-center p-2 text-gray-500 text-[10px] md:text-xs mobile-safe-bottom">
-          <p>
-            Powered by 1000× Dimensional Cognition Cube™ — Secured by
-            Dimensional Integrity Engine™ + Immortal Logic
-          </p>
+          <p>Powered by NOVA X Quantum™️</p>
         </div>
       </div>
 

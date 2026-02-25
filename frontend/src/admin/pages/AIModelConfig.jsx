@@ -321,19 +321,21 @@ const AIModelConfig = () => {
           <div className="flex w-full px-4 pb-0">
             <button
               onClick={() => setActiveTab("config")}
-              className={`flex-1 pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "config"
+              className={`flex-1 pb-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "config"
                   ? "border-blue-500 text-blue-400"
                   : "border-transparent text-slate-400 hover:text-slate-200"
-                }`}
+              }`}
             >
               Configuration
             </button>
             <button
               onClick={() => setActiveTab("preview")}
-              className={`flex-1 pb-3 text-sm font-medium border-b-2 transition-colors ${activeTab === "preview"
+              className={`flex-1 pb-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "preview"
                   ? "border-blue-500 text-blue-400"
                   : "border-transparent text-slate-400 hover:text-slate-200"
-                }`}
+              }`}
             >
               Test Agent
             </button>
@@ -342,14 +344,16 @@ const AIModelConfig = () => {
       )}
 
       {/* Desktop Header for Config (hidden on mobile) */}
-      <div className={`
+      <div
+        className={`
         ${isMobile ? (activeTab === "config" ? "flex" : "hidden") : "flex w-1/3"} 
         flex-col bg-slate-900 border-r border-slate-800 h-full overflow-hidden
-      `}>
+      `}
+      >
         {/* Desktop Title */}
         <div className="hidden md:flex p-6 flex-col gap-2 flex-shrink-0 border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={() => navigate("/admin?navOption=models")}
               className="hover:bg-slate-800 p-1 rounded-full transition-colors"
             >
@@ -358,7 +362,9 @@ const AIModelConfig = () => {
             {id === "new" ? (
               <h2 className="text-xl font-bold">Create Agent</h2>
             ) : (
-                <h2 className="text-xl font-bold truncate">Configure {config.name}</h2>
+              <h2 className="text-xl font-bold truncate">
+                Configure {config.name}
+              </h2>
             )}
           </div>
         </div>
@@ -366,7 +372,9 @@ const AIModelConfig = () => {
         {/* Scrollable Form */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scroll">
           <label className="block">
-            <span className="block mb-1 font-medium text-slate-300">Agent Name</span>
+            <span className="block mb-1 font-medium text-slate-300">
+              Agent Name
+            </span>
             <input
               type="text"
               name="name"
@@ -475,7 +483,9 @@ const AIModelConfig = () => {
           </label>
 
           <label className="block">
-            <span className="block mb-1 font-medium text-slate-300">API Key</span>
+            <span className="block mb-1 font-medium text-slate-300">
+              API Key
+            </span>
             <input
               type="password"
               name="apiConfig.apiKey"
@@ -613,7 +623,7 @@ const AIModelConfig = () => {
           <label className="block">
             <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
               <Activity className="w-4 h-4 text-cyan-400" />
-              Polygon
+              CVR - Polygon
             </span>
             <input
               type="text"
@@ -628,7 +638,7 @@ const AIModelConfig = () => {
           <label className="block">
             <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
               <Zap className="w-4 h-4 text-cyan-400" />
-              XRPL
+              CVR - XRPL
             </span>
             <input
               type="text"
@@ -641,7 +651,9 @@ const AIModelConfig = () => {
           </label>
 
           <label className="block">
-            <span className="block mb-1 font-medium text-slate-300">Knowledge Base</span>
+            <span className="block mb-1 font-medium text-slate-300">
+              Knowledge Base
+            </span>
             <div className="border border-slate-700 border-dashed rounded-xl p-4 bg-slate-800/50 text-center">
               <input
                 type="file"
@@ -651,11 +663,16 @@ const AIModelConfig = () => {
                 className="hidden"
                 id="knowledge-upload"
               />
-              <label htmlFor="knowledge-upload" className="cursor-pointer flex flex-col items-center gap-2">
+              <label
+                htmlFor="knowledge-upload"
+                className="cursor-pointer flex flex-col items-center gap-2"
+              >
                 <div className="bg-slate-700 p-2 rounded-full">
                   <Plus className="w-5 h-5 text-blue-400" />
                 </div>
-                <span className="text-sm text-slate-400">Click to upload files</span>
+                <span className="text-sm text-slate-400">
+                  Click to upload files
+                </span>
               </label>
             </div>
 
@@ -693,17 +710,19 @@ const AIModelConfig = () => {
             {isSaving ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-                "Save Configuration"
+              "Save Configuration"
             )}
           </button>
         </div>
       </div>
 
       {/* Right: Playground Section */}
-      <div className={`
+      <div
+        className={`
         ${isMobile ? (activeTab === "preview" ? "flex" : "hidden") : "flex w-2/3"} 
         flex-col bg-[#020617] h-full relative
-      `}>
+      `}
+      >
         {/* Background decoration */}
         <div className="absolute inset-0 bg-blue-500/5 pointer-events-none" />
 
@@ -727,7 +746,9 @@ const AIModelConfig = () => {
                 ™
               </span>
             </h1>
-            <p className="text-xs text-slate-500 mt-2 uppercase tracking-widest">Preview Mode</p>
+            <p className="text-xs text-slate-500 mt-2 uppercase tracking-widest">
+              Preview Mode
+            </p>
           </div>
         </div>
 
@@ -783,21 +804,21 @@ const AIModelConfig = () => {
                 {selectedFiles.map((file, index) => (
                   <div
                     key={index}
-                        className="flex items-center space-x-2 bg-slate-800 rounded-lg p-2 border border-slate-700"
-                      >
-                        {getFileIcon(file.type)}
-                        <span className="text-xs text-slate-300 truncate max-w-[100px]">
-                          {file.name}
-                        </span>
-                        <button
-                          onClick={() => removeSelectedFile(index)}
-                          className="text-slate-500 hover:text-red-400"
-                          disabled={isSending}
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
+                    className="flex items-center space-x-2 bg-slate-800 rounded-lg p-2 border border-slate-700"
+                  >
+                    {getFileIcon(file.type)}
+                    <span className="text-xs text-slate-300 truncate max-w-[100px]">
+                      {file.name}
+                    </span>
+                    <button
+                      onClick={() => removeSelectedFile(index)}
+                      className="text-slate-500 hover:text-red-400"
+                      disabled={isSending}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
 
