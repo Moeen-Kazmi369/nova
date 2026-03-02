@@ -6,6 +6,7 @@ const connectDB = require("./config/mongodb");
 const supabase = require("./config/supabase");
 const openaiClient = require("./config/openai");
 const transporter = require("./config/nodemailer");
+const initializeSupabase = require("./utils/supabaseInit");
 
 const PORT = process.env.PORT || 5000;
 
@@ -79,6 +80,9 @@ const verifyConnections = async () => {
 // Connect to all services and start server
 const startServer = async () => {
   try {
+    // Initialize Supabase Tables/Functions
+    await initializeSupabase();
+
     const connections = await verifyConnections();
     
     // Check if all connections are successful
