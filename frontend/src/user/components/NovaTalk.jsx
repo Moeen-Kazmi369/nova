@@ -7,7 +7,7 @@ export const NovaTalk= ({
   text,
   voiceId,
   apiKey,
-  size = 220,
+  size = window.innerWidth < 768 ? 250 : 220,
   onEnd
 }) => {
   const { audioSrc, audioRef, isLoading } = useElevenLabsVoice({

@@ -135,7 +135,7 @@ const CurrentChatVoiceModePage = () => {
               isActive={isListening || isSpeaking || false}
               isUserInput={isListening}
               audioLevel={Math.random() * 0.8 + 0.2}
-              size={isDesktop ? 180 : 150}
+              size={isDesktop ? 300 : 250}
               className="mx-auto"
             />
           </div>

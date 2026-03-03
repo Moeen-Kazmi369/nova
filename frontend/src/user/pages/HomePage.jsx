@@ -465,7 +465,7 @@ function HomePage() {
                           ? Math.random() * 0.8 + 0.2
                           : 0
                     }
-                    size={isDesktop ? 165 : 100}
+                    size={isDesktop ? 200 : 180}
                     className="mx-auto"
                   />
                 </div>

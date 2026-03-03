@@ -735,7 +735,7 @@ const AIModelConfig = () => {
               audioLevel={
                 false ? audioLevel : isSpeaking ? Math.random() * 0.8 + 0.2 : 0
               }
-              size={isMobile ? 100 : 140}
+              size={isMobile ? 180 : 220}
               className="mx-auto"
             />
           </div>

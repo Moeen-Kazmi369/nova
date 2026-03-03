@@ -47,6 +47,8 @@ export const VoiceOverlay = ({
   const isUserInput = isListening && !isSpeaking;
   const waveformAudioLevel = isListening ? audioLevel : (isSpeaking ? Math.random() * 0.8 + 0.2 : 0);
 
+  const isMobile = window.innerWidth < 768;
+
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 animate-fadeIn"
@@ -79,7 +81,7 @@ export const VoiceOverlay = ({
             isActive={isActive}
             isUserInput={isUserInput}
             audioLevel={waveformAudioLevel}
-            size={220}
+              size={isMobile ? 250 : 220}
             className="mx-auto"
           />
         )}

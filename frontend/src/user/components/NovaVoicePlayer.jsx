@@ -14,14 +14,16 @@ export const NovaVoicePlayer= ({ audioSrc }) => {
     }
   }, [audioSrc]);
 
+  const isMobile = window.innerWidth < 768;
+
   return (
-    <div className="relative w-[220px] h-[220px]">
+    <div className={`relative ${isMobile ? 'w-[250px] h-[250px]' : 'w-[220px] h-[220px]'}`}>
       <audio ref={audioRef} src={audioSrc} />
       <CircularWaveform 
         isActive={true}
         isUserInput={false}
         audioLevel={audioLevel}
-        size={220}
+        size={isMobile ? 250 : 220}
       />
     </div>
   );
