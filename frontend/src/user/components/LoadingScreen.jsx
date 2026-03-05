@@ -146,7 +146,7 @@ export const LoadingScreen= ({ progress }) => {
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-10 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 flex flex-col overflow-hidden">
       {/* Background grid pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{

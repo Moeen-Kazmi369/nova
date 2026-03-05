@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ChatMessage } from "../components/ChatMessage";
 import { TextInput } from "../components/TextInput";
 import { CircularWaveform } from "../components/CircularWaveform";
@@ -51,8 +51,6 @@ function HomePage() {
   const [permissionStatus, setPermissionStatus] = useState("granted");
   const [chatMessages, setChatMessages] = useState([]);
   const [localConversations, setLocalConversations] = useState([]);
-  const messagesEndRef = useRef(null);
-  const isFirstLoadRef = useRef(true);
   const navigate = useNavigate();
 
   // Fetch data using hooks
@@ -74,6 +72,78 @@ function HomePage() {
   } = useGetConversationMessages(selectedChatId);
   const deleteConversation = useDeleteConversation();
   const userTextPrompt = useUserTextPrompt();
+  // ── refs ──────────────────────────────────────────────────────────────
+  const scrollContainerRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const chatLengthRef = useRef(0); // tracks previous message count
+
+
+  // DEBUG — paste this block temporarily
+  useEffect(() => {
+    console.log("🔴 MOUNT EFFECT FIRED");
+    const container = scrollContainerRef.current;
+    const sentinel = messagesEndRef.current;
+
+    console.log("container exists:", !!container);
+    console.log("sentinel exists:", !!sentinel);
+    console.log("chatMessages.length at mount:", chatMessages.length);
+
+    if (container) {
+      console.log("container scrollHeight:", container.scrollHeight);
+      console.log("container clientHeight:", container.clientHeight);
+      console.log("container scrollTop:", container.scrollTop);
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log("📨 chatMessages changed, length:", chatMessages.length);
+    console.log("container exists:", !!scrollContainerRef.current);
+    if (scrollContainerRef.current) {
+      console.log("scrollHeight:", scrollContainerRef.current.scrollHeight);
+      console.log("clientHeight:", scrollContainerRef.current.clientHeight);
+    }
+  }, [chatMessages]);
+  // REPLACE the mount effect with this:
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // Snap to bottom once as soon as the container has real height
+    const observer = new ResizeObserver(() => {
+      if (container.scrollHeight > container.clientHeight) {
+        container.scrollTop = container.scrollHeight;
+        observer.disconnect(); // done, never run again
+      }
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []); // still empty deps — but now waits for real dimensions
+  // ── When new messages are added (user sends / AI replies) ──
+  useEffect(() => {
+    const newLength = chatMessages.length;
+    const prevLength = chatLengthRef.current;
+    chatLengthRef.current = newLength;
+
+    // Only scroll when messages are added, not on initial empty render
+    if (newLength > prevLength && newLength > 0) {
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+        }
+      });
+    }
+  }, [chatMessages.length]);
+
+  // ── Scroll when AI processing indicator appears ──
+  useEffect(() => {
+    if (isProcessing && scrollContainerRef.current) {
+      requestAnimationFrame(() => {
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      });
+    }
+  }, [isProcessing]);
+
 
   useEffect(() => {
     setTimeout(() => {
@@ -81,16 +151,17 @@ function HomePage() {
     }, 2000);
   }, []);
 
+  // KEEP THIS but remove the isFirstLoadRef line
   useEffect(() => {
     if (!messages) return;
     setChatMessages((prev) => {
       const prevLast = prev?.[prev.length - 1]?._id;
       const nextLast = messages?.[messages.length - 1]?._id;
       const sameLength = (prev?.length || 0) === (messages?.length || 0);
-      if (sameLength && prevLast === nextLast) return prev; // no state change
+      if (sameLength && prevLast === nextLast) return prev;
       return messages;
     });
-    isFirstLoadRef.current = true;
+    // ← do NOT add any scroll logic here
   }, [messages]);
 
   useEffect(() => {
@@ -100,33 +171,12 @@ function HomePage() {
     setSelectedModel((prev) => prev || preferred || models[0]);
   }, [models]);
 
-
   // Update isDesktop on window resize
   useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-
-  // Auto-scroll to bottom when messages change or processing
-  useEffect(() => {
-    const scrollToBottom = (behavior = "smooth") => {
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior, block: "end" });
-      }
-    };
-
-    // Immediate scroll for first load
-    if (isFirstLoadRef.current && chatMessages.length > 0) {
-      setTimeout(() => {
-        scrollToBottom("auto");
-        isFirstLoadRef.current = false;
-      }, 100);
-    } else {
-      // Smooth scroll for new messages
-      scrollToBottom("smooth");
-    }
-  }, [chatMessages, isProcessing]);
 
   // Handle global stop voice
   const handleStopVoice = () => {
@@ -359,16 +409,16 @@ function HomePage() {
     });
   };
 
-  if (isLoading) return <LoadingScreen />;
   return (
     <>
+      {isLoading && <LoadingScreen />} 
       <div
         className="h-screen bg-slate-950 text-white flex flex-col overflow-hidden"
         style={{ height: "100dvh" }}
       >
         {/* Voice Stop Overlay - Fixed at top */}
         {isSpeaking && (
-          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in zoom-in duration-300">
+          <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in zoom-in duration-300">
             <button
               onClick={handleStopVoice}
               className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-full shadow-2xl flex items-center gap-2 font-medium transition-all hover:scale-105 active:scale-95 border border-red-400/20 text-sm"
@@ -478,51 +528,57 @@ function HomePage() {
                   </h1>
                 </div>
               </div>
-              <div className="flex-1 px-2 md:px-4 py-2 md:py-4 overflow-y-auto scrollbar-hide min-h-0">
-                <div className="flex-1 px-2 md:px-4 py-2 md:py-4 overflow-y-auto scrollbar-hide">
-                  {isMessagesLoading && !isProcessing ? (
-                    <p className="text-gray-400 text-center text-sm md:text-base">
-                      Loading messages...
-                    </p>
-                  ) : messagesError ? (
-                    <p className="text-red-400 text-center text-sm md:text-base">
-                      Error loading messages: {messagesError.message}
-                    </p>
-                  ) : !chatMessages || chatMessages.length === 0 ? (
-                    <p className="text-gray-400 text-center text-sm md:text-base">
-                      No messages yet
-                    </p>
-                  ) : (
-                    chatMessages.map((message) => (
-                      <ChatMessage
-                        key={message._id}
-                        message={message.text}
-                        attachments={message.attachments}
-                        isUser={message.sender === "user"}
-                        timestamp={new Date(message.timestamp)}
-                        setIsSpeaking={setIsSpeaking}
-                      />
-                    ))
-                  )}
-                  {isProcessing && (
-                    <div className="flex justify-end mb-4 md:mb-6">
-                      <div className="bg-slate-800/80 px-3 py-2 md:px-4 md:py-3 rounded-2xl max-w-xs">
-                        <div className="flex space-x-1">
-                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-pulse" />
-                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-pulse delay-100" />
-                          <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-pulse delay-200" />
-                        </div>
+              {/* SINGLE scrollable container — delete the two wrapper divs that were here */}
+              <div
+                ref={scrollContainerRef}
+                className="flex-1 overflow-y-auto scrollbar-hide min-h-0 px-2 md:px-4 py-2 md:py-4"
+              >
+                {isMessagesLoading && !isProcessing ? (
+                  <p className="text-gray-400 text-center text-sm md:text-base">
+                    Loading messages...
+                  </p>
+                ) : messagesError ? (
+                  <p className="text-red-400 text-center text-sm md:text-base">
+                    Error loading messages: {messagesError.message}
+                  </p>
+                ) : !chatMessages || chatMessages.length === 0 ? (
+                  <p className="text-gray-400 text-center text-sm md:text-base">
+                    No messages yet
+                  </p>
+                ) : (
+                  chatMessages.map((message) => (
+                    <ChatMessage
+                      key={message._id}
+                      message={message.text}
+                      attachments={message.attachments}
+                      isUser={message.sender === "user"}
+                      timestamp={new Date(message.timestamp)}
+                      setIsSpeaking={setIsSpeaking}
+                    />
+                  ))
+                )}
+
+                {isProcessing && (
+                  <div className="flex justify-end mb-4 md:mb-6">
+                    <div className="bg-slate-800/80 px-3 py-2 md:px-4 md:py-3 rounded-2xl max-w-xs">
+                      <div className="flex space-x-1">
+                        <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-pulse" />
+                        <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-pulse delay-100" />
+                        <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full animate-pulse delay-200" />
                       </div>
                     </div>
-                  )}
-                  {errorMessage && (
-                    <div className="mb-2 text-red-400 text-xs md:text-sm bg-slate-800/70 rounded-lg p-2 text-center">
-                      {errorMessage}
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                  <div className="h-2 md:h-4" />
-                </div>
+                  </div>
+                )}
+
+                {errorMessage && (
+                  <div className="mb-2 text-red-400 text-xs md:text-sm bg-slate-800/70 rounded-lg p-2 text-center">
+                    {errorMessage}
+                  </div>
+                )}
+
+                {/* Sentinel — must be INSIDE the same scrollable div */}
+                <div ref={messagesEndRef} style={{ height: 1 }} />
+                <div className="h-2 md:h-4" />
               </div>
               <div className="flex-shrink-0 px-2 pb-2 md:px-4 md:pb-4">
                 <div className="mb-2 flex flex-col space-y-2">
