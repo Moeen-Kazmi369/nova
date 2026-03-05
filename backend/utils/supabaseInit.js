@@ -29,9 +29,23 @@ async function initializeSupabase() {
         metadata jsonb,
         created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
       );
+
+      -- Enable Row Level Security (RLS)
+      ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+
+      -- Create policy to allow service_role (backend) full access
+      -- Note: service_role already bypasses RLS, but this is explicit.
+      DO $$ 
+      BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'documents' AND policyname = 'Allow service_role full access') THEN
+              CREATE POLICY "Allow service_role full access" ON documents FOR ALL TO service_role USING (true) WITH CHECK (true);
+          END IF;
+      END $$;
     `);
 
     // 3. Create match_documents function for RAG retrieval
+    // Added SECURITY DEFINER so that it can be called by anon/authenticated users 
+    // while still having access to the RLS-enabled documents table.
     await client.query(`
       CREATE OR REPLACE FUNCTION match_documents (
         query_embedding vector(1536),
@@ -44,6 +58,7 @@ async function initializeSupabase() {
         similarity float
       )
       LANGUAGE plpgsql
+      SECURITY DEFINER
       AS $$
       BEGIN
         RETURN QUERY
