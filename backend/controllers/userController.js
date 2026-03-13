@@ -419,42 +419,45 @@ exports.elevenLabsLLM = async (req, res) => {
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no"); // Prevent Nginx buffering
+    res.setHeader("X-Accel-Buffering", "no");
 
-    const chunkId = `chatcmpl-silent-${Date.now()}`;
+    const chunkId = `chatcmpl-${Date.now()}`;
     const created = Math.floor(Date.now() / 1000);
     const modelName = req.body.model || "gpt-4o-mini";
 
-    // 1. Send the Role chunk (Standard OpenAI protocol)
-    // ElevenLabs looks for the start of the message.
-    const startChunk = JSON.stringify({
+    // 1. Send the Role + Empty Content in one go
+    // Sending role and content: "" together mimics a very fast LLM response
+    const initialChunk = {
       id: chunkId,
       object: "chat.completion.chunk",
       created: created,
       model: modelName,
-      choices: [
-        { delta: { role: "assistant" }, index: 0, finish_reason: null },
-      ],
-    });
-    res.write(`data: ${startChunk}\n\n`);
+      choices: [{
+        index: 0,
+        delta: { role: "assistant", content: "" },
+        finish_reason: null
+      }]
+    };
+    res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
 
-    // 2. Send the Finish chunk immediately with NO content
-    // We omit the 'content' key entirely in this delta.
-    const stopChunk = JSON.stringify({
+    // 2. Send the Stop Signal
+    const stopChunk = {
       id: chunkId,
       object: "chat.completion.chunk",
       created: created,
       model: modelName,
-      choices: [
-        { delta: {}, index: 0, finish_reason: "stop" },
-      ],
-    });
-    res.write(`data: ${stopChunk}\n\n`);
+      choices: [{
+        index: 0,
+        delta: {},
+        finish_reason: "stop"
+      }]
+    };
+    res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
 
-    // 3. Finalize
+    // 3. Finalize protocol
     res.write("data: [DONE]\n\n");
 
-    console.log("[WakeWord] NOT triggered. Sending silent stream.");
+    console.log("[WakeWord] Silent Mode: Protocol satisfied.");
     return res.end();
   }
 
