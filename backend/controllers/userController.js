@@ -416,28 +416,30 @@ exports.elevenLabsLLM = async (req, res) => {
   const { triggered, question } = detectWakeWord(transcript);
 
   if (!triggered) {
-    // CRITICAL: Must send a valid (but empty) SSE stream that mirrors OpenAI perfectly
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // Prevent Nginx buffering
 
     const chunkId = `chatcmpl-silent-${Date.now()}`;
     const created = Math.floor(Date.now() / 1000);
     const modelName = req.body.model || "gpt-4o-mini";
 
-    // 1. Send initial empty chunk
-    const silentChunk = JSON.stringify({
+    // 1. Send the Role chunk (Standard OpenAI protocol)
+    // ElevenLabs looks for the start of the message.
+    const startChunk = JSON.stringify({
       id: chunkId,
       object: "chat.completion.chunk",
       created: created,
       model: modelName,
       choices: [
-        { delta: { content: "" }, index: 0, finish_reason: null },
+        { delta: { role: "assistant" }, index: 0, finish_reason: null },
       ],
     });
-    res.write(`data: ${silentChunk}\n\n`);
+    res.write(`data: ${startChunk}\n\n`);
 
-    // 2. Send finish_reason: "stop" chunk (required by some SDKs to finalize)
+    // 2. Send the Finish chunk immediately with NO content
+    // We omit the 'content' key entirely in this delta.
     const stopChunk = JSON.stringify({
       id: chunkId,
       object: "chat.completion.chunk",
@@ -449,10 +451,10 @@ exports.elevenLabsLLM = async (req, res) => {
     });
     res.write(`data: ${stopChunk}\n\n`);
 
-    // 3. Close stream
+    // 3. Finalize
     res.write("data: [DONE]\n\n");
 
-    console.log("[WakeWord] NOT triggered:", { transcript });
+    console.log("[WakeWord] NOT triggered. Sending silent stream.");
     return res.end();
   }
 
