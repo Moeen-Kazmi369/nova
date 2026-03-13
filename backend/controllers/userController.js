@@ -412,62 +412,6 @@ exports.elevenLabsLLM = async (req, res) => {
     });
   }
 
-  const transcript = lastUserMessage.content || "";
-  const { triggered, question } = detectWakeWord(transcript);
-
-  if (!triggered) {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-
-    const chunkId = `chatcmpl-${Date.now()}`;
-    const created = Math.floor(Date.now() / 1000);
-    const modelName = req.body.model || "gpt-4o-mini";
-
-    // 1. Send the Role + Empty Content in one go
-    // Sending role and content: "" together mimics a very fast LLM response
-    const initialChunk = {
-      id: chunkId,
-      object: "chat.completion.chunk",
-      created: created,
-      model: modelName,
-      choices: [{
-        index: 0,
-        delta: { role: "assistant", content: "" },
-        finish_reason: null
-      }]
-    };
-    res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
-
-    // 2. Send the Stop Signal
-    const stopChunk = {
-      id: chunkId,
-      object: "chat.completion.chunk",
-      created: created,
-      model: modelName,
-      choices: [{
-        index: 0,
-        delta: {},
-        finish_reason: "stop"
-      }]
-    };
-    res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
-
-    // 3. Finalize protocol
-    res.write("data: [DONE]\n\n");
-
-    console.log("[WakeWord] Silent Mode: Protocol satisfied.");
-    return res.end();
-  }
-
-  // Replace last user message with just the extracted question
-  if (lastUserMessage && question) {
-    lastUserMessage.content = question;
-  }
-
-  const prompt = lastUserMessage.content;
-
   const conversation = await Conversation.findById(conversationId);
   if (!conversation) {
     return res.status(404).json({
@@ -477,6 +421,80 @@ exports.elevenLabsLLM = async (req, res) => {
       },
     });
   }
+
+  const transcript = lastUserMessage.content || "";
+  const { triggered, question, prefix } = detectWakeWord(transcript);
+
+  if (!triggered) {
+    // 1. Save user message even if not triggered to preserve context for future turns
+    conversation.messages.push({
+      sender: "user",
+      text: transcript,
+      attachments: [],
+    });
+    conversation.updatedAt = new Date();
+    await conversation.save();
+
+    // 2. Respond with "skip_turn" tool call to keep agent silent gracefully
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+
+    const chunkId = `chatcmpl-${Date.now()}`;
+    const created = Math.floor(Date.now() / 1000);
+    const modelName = req.body.model || "gpt-4o-mini";
+
+    const toolChunk = {
+      id: chunkId,
+      object: "chat.completion.chunk",
+      created: created,
+      model: modelName,
+      choices: [{
+        index: 0,
+        delta: {
+          role: "assistant",
+          tool_calls: [{
+            index: 0,
+            id: `call_${Date.now()}`,
+            type: "function",
+            function: {
+              name: "skip_turn",
+              arguments: "{}"
+            }
+          }]
+        },
+        finish_reason: null
+      }]
+    };
+
+    const finishChunk = {
+      id: chunkId,
+      object: "chat.completion.chunk",
+      created: created,
+      model: modelName,
+      choices: [{
+        index: 0,
+        delta: {},
+        finish_reason: "tool_calls"
+      }]
+    };
+
+    res.write(`data: ${JSON.stringify(toolChunk)}\n\n`);
+    res.write(`data: ${JSON.stringify(finishChunk)}\n\n`);
+    res.write("data: [DONE]\n\n");
+
+    console.log("[WakeWord] Silent Mode: Sent skip_turn tool call.");
+    return res.end();
+  }
+
+  // Preserve context: Combine prefix (if any) with the extracted question
+  if (lastUserMessage) {
+    lastUserMessage.content = (prefix ? prefix + ". " : "") + (question || transcript);
+  }
+
+  const prompt = lastUserMessage.content;
+
   const wasEmptyBefore = (conversation.messages?.length || 0) === 0;
 
   // SSE headers (same as before)
