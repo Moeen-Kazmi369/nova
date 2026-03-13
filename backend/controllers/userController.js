@@ -8,6 +8,7 @@ const supabase = require("../config/supabase");
 const openaiClient = require("../config/openai");
 const openai = require("openai");
 const mongoose = require("mongoose");
+const { detectWakeWord } = require("../utils/wakeWord");
 
 const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -397,7 +398,7 @@ exports.elevenLabsLLM = async (req, res) => {
     });
   }
 
-  // Find last user message (Node compat)
+  // Find last user message
   const lastUserMessage =
     messages.findLast?.((m) => m.role === "user") ||
     [...messages].reverse().find((m) => m.role === "user");
@@ -410,6 +411,38 @@ exports.elevenLabsLLM = async (req, res) => {
       },
     });
   }
+
+  const transcript = lastUserMessage.content || "";
+  const { triggered, question } = detectWakeWord(transcript);
+
+  if (!triggered) {
+    // CRITICAL: Must send a valid (but empty) SSE stream
+    // An abrupt [DONE] with no prior chunk causes ElevenLabs to treat
+    // this as a failed session and trigger reconnect.
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    // Send one empty delta chunk BEFORE [DONE]
+    const silentChunk = JSON.stringify({
+      id: "silent-nova",
+      object: "chat.completion.chunk",
+      choices: [
+        { delta: { content: "" }, index: 0, finish_reason: null },
+      ],
+    });
+    res.write(`data: ${silentChunk}\n\n`);
+    res.write("data: [DONE]\n\n");
+
+    console.log("[WakeWord] NOT triggered:", { transcript });
+    return res.end();
+  }
+
+  // Replace last user message with just the extracted question
+  if (lastUserMessage && question) {
+    lastUserMessage.content = question;
+  }
+
   const prompt = lastUserMessage.content;
 
   const conversation = await Conversation.findById(conversationId);

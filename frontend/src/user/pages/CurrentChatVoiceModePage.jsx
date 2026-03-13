@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Menu } from "lucide-react";
 import { CircularWaveform } from "../components/CircularWaveform";
 import { MenuOverlay } from "../components/MenuOverlay";
+import { detectWakeWord } from "../utils/wakeWord";
 
 const CurrentChatVoiceModePage = () => {
     const navigate = useNavigate();
@@ -13,6 +14,7 @@ const CurrentChatVoiceModePage = () => {
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   const [transcripts, setTranscripts] = useState([]);
   const transcriptsRef = useRef([]);
+  const hasStartedSession = useRef(false); // ← KEY: ref, not state
 
   const conversation = useConversation({
     onConnect: () => console.log("Connected"),
@@ -20,7 +22,13 @@ const CurrentChatVoiceModePage = () => {
       console.log("Disconnected");
       await handleSaveSession(); // 👈 Await async save
     },
-    onMessage: (msg) => setTranscripts((prev) => [...prev, msg]),
+    onMessage: (msg) => {
+      if (msg.source === "user") {
+        const { triggered } = detectWakeWord(msg.message || msg.text || "");
+        if (!triggered) return;
+      }
+      setTranscripts((prev) => [...prev, msg]);
+    },
     onError: (err) => console.error("Conversation error:", err),
   });
   const [isListening, setIsListening] = useState(false);
@@ -41,7 +49,10 @@ const CurrentChatVoiceModePage = () => {
   }, [conversation]);
 
   useEffect(() => {
-    startConversation();
+    if (!hasStartedSession.current) {
+      hasStartedSession.current = true;
+      startConversation();
+    }
     const handleResize = () => {
       setIsDesktop(window.innerWidth > 768);
       setViewportHeight(window.innerHeight);

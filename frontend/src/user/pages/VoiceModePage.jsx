@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Menu, Mic, MicOff } from "lucide-react";
 import { CircularWaveform } from "../components/CircularWaveform";
 import { MenuOverlay } from "../components/MenuOverlay";
+import { detectWakeWord } from "../utils/wakeWord";
 
 const VoiceModePage = () => {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ const VoiceModePage = () => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   const [micOn, setMicOn] = useState(true);
+  const hasStartedSession = useRef(false); // ← KEY: ref, not state
   // Get aiModelId and conversationId from URL query parameters
   const aiModelId = searchParams.get("aiModelId");
   const aiModelIdFirstMessage = searchParams.get("aiModelIdFirstMessage");
@@ -27,6 +29,14 @@ const VoiceModePage = () => {
     onError: (err) => console.error("Conversation error:", err),
     onMessage: (message) => {
       console.log("Received message:", message);
+      // Guard: only update or process if this was a wake-word-triggered response
+      if (message.source === "user") {
+        const { triggered } = detectWakeWord(message.message || message.text || "");
+        if (!triggered) {
+          // Silent: do not show transcript or AI thinking
+          return;
+        }
+      }
     },
     onAudio: (audio) => {
       // console.log("Received audio chunk:", audio);
@@ -58,7 +68,7 @@ const VoiceModePage = () => {
           agent: {
             firstMessage:
               aiModelIdFirstMessage ||
-              "Hi there! Welcome to NOVA 1000. How can I help you today?",
+              "NOVA 1000 is active and listening.",
           },
         },
         customLlmExtraBody: {
@@ -77,13 +87,21 @@ const VoiceModePage = () => {
   }, [conversation, aiModelId, conversationId]);
 
   useEffect(() => {
-    startConversation();
+    // hasStartedSession.current prevents any double-call
+    if (!hasStartedSession.current) {
+      hasStartedSession.current = true;
+      startConversation();
+    }
     const handleResize = () => {
       setIsDesktop(window.innerWidth > 768);
       setViewportHeight(window.innerHeight);
     };
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      // Optional: Cleanup session on unmount if appropriate, 
+      // but SDK usually handles disconnect via hook.
+    };
   }, [startConversation]);
 
   useEffect(() => {
