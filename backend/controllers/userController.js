@@ -416,22 +416,40 @@ exports.elevenLabsLLM = async (req, res) => {
   const { triggered, question } = detectWakeWord(transcript);
 
   if (!triggered) {
-    // CRITICAL: Must send a valid (but empty) SSE stream
-    // An abrupt [DONE] with no prior chunk causes ElevenLabs to treat
-    // this as a failed session and trigger reconnect.
+    // CRITICAL: Must send a valid (but empty) SSE stream that mirrors OpenAI perfectly
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    // Send one empty delta chunk BEFORE [DONE]
+    const chunkId = `chatcmpl-silent-${Date.now()}`;
+    const created = Math.floor(Date.now() / 1000);
+    const modelName = req.body.model || "gpt-4o-mini";
+
+    // 1. Send initial empty chunk
     const silentChunk = JSON.stringify({
-      id: "silent-nova",
+      id: chunkId,
       object: "chat.completion.chunk",
+      created: created,
+      model: modelName,
       choices: [
         { delta: { content: "" }, index: 0, finish_reason: null },
       ],
     });
     res.write(`data: ${silentChunk}\n\n`);
+
+    // 2. Send finish_reason: "stop" chunk (required by some SDKs to finalize)
+    const stopChunk = JSON.stringify({
+      id: chunkId,
+      object: "chat.completion.chunk",
+      created: created,
+      model: modelName,
+      choices: [
+        { delta: {}, index: 0, finish_reason: "stop" },
+      ],
+    });
+    res.write(`data: ${stopChunk}\n\n`);
+
+    // 3. Close stream
     res.write("data: [DONE]\n\n");
 
     console.log("[WakeWord] NOT triggered:", { transcript });

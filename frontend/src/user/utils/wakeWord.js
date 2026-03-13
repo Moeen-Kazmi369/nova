@@ -11,10 +11,8 @@ export function detectWakeWord(transcript) {
   // Normalize: lowercase, collapse whitespace, trim
   const normalized = transcript.toLowerCase().trim().replace(/\s+/g, " ");
 
-  // Pattern: "nova" + optional space + "1000" OR "one thousand"
-  // Must not have other words between nova and the number
-  // Captures everything after the wake phrase as the question
-  const pattern = /(?:^|\s)(nova\s+(?:1000|one\s+thousand))[,.]?\s*(.*)/i;
+  // Pattern: handle "nova", "novo", "nora", "no va" + optional space + "1000" OR "one thousand"
+  const pattern = /(?:^|\s)((?:nova|novo|nora|no\s+va)\s+(?:1000|one\s+thousand))[,.]?\s*(.*)/i;
 
   const match = normalized.match(pattern);
   if (!match) return { triggered: false, question: "" };
