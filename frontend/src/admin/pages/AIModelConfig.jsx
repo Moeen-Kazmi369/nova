@@ -608,7 +608,7 @@ const AIModelConfig = () => {
           <label className="block">
             <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
               <Shield className="w-4 h-4 text-cyan-400" />
-              COVENANT
+              Fingerprint
             </span>
             <input
               type="text"
@@ -616,14 +616,14 @@ const AIModelConfig = () => {
               value={config.covenant}
               onChange={handleChange}
               className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
-              placeholder="COVENANT"
+              placeholder="Hash"
             />
           </label>
 
           <label className="block">
             <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
               <Activity className="w-4 h-4 text-cyan-400" />
-              CVR - Polygon
+              AnchorChain
             </span>
             <input
               type="text"
@@ -631,14 +631,14 @@ const AIModelConfig = () => {
               value={config.polygon}
               onChange={handleChange}
               className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
-              placeholder="Polygon"
+              placeholder="Hash"
             />
           </label>
 
           <label className="block">
             <span className="flex items-center gap-2 mb-1 font-medium text-slate-300">
               <Zap className="w-4 h-4 text-cyan-400" />
-              CVR - XRPL
+              CVR
             </span>
             <input
               type="text"
@@ -646,7 +646,7 @@ const AIModelConfig = () => {
               value={config.xrpl}
               onChange={handleChange}
               className="w-full border border-slate-700 bg-slate-800 text-white rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all"
-              placeholder="XRPL"
+              placeholder="Hash"
             />
           </label>
 
