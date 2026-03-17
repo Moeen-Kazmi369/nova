@@ -1,6 +1,9 @@
 const User = require("../models/User");
 const AIModel = require("../models/AIModel");
 const multer = require("multer");
+const bcrypt = require("bcryptjs");
+const transporter = require("../config/nodemailer");
+const crypto = require("crypto");
 const { parsePDF, parseTxtCsvJson } = require("../utils/fileParsers");
 const { chunkText } = require("../utils/textChunker");
 const { getImageDescription } = require("../utils/imageDescription.js"); // similar to admin
@@ -294,6 +297,76 @@ exports.getAllAIModelsForAdmin = async (req, res) => {
     res.status(500).json({ message: "Failed to get AI models" });
   }
 };
+
+// Add a new user (admin only) — generates password and emails credentials
+exports.addUser = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({ message: "Name and email are required" });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "A user with this email already exists" });
+    }
+
+    // Generate a secure random password
+    const rawPassword = crypto.randomBytes(8).toString("hex"); // 16 hex chars
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role: "user",
+      isVerified: true, // Pre-verified — admin invited them
+    });
+
+    await user.save();
+
+    // Try to send credentials email — non-fatal if it fails
+    let emailSent = false;
+    try {
+      await transporter.sendMail({
+        from: `"NOVA 1000" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "You've been added to NOVA 1000 — Your Login Credentials",
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:32px;background:#0f172a;color:#e2e8f0;border-radius:12px;">
+            <h2 style="color:#60a5fa;margin-bottom:8px;">Welcome to NOVA 1000, ${name}!</h2>
+            <p style="color:#94a3b8;">An admin has created an account for you. Use the credentials below to sign in.</p>
+            <div style="background:#1e293b;border-radius:8px;padding:20px;margin:24px 0;">
+              <p style="margin:0 0 8px;color:#94a3b8;font-size:13px;">EMAIL</p>
+              <p style="margin:0 0 20px;font-size:16px;font-weight:bold;color:#f1f5f9;">${email}</p>
+              <p style="margin:0 0 8px;color:#94a3b8;font-size:13px;">TEMPORARY PASSWORD</p>
+              <p style="margin:0;font-size:18px;font-weight:bold;letter-spacing:2px;color:#60a5fa;font-family:monospace;">${rawPassword}</p>
+            </div>
+            <p style="color:#94a3b8;font-size:13px;">For security, please change your password after your first login using the <strong>Forgot Password</strong> option.</p>
+            <a href="${process.env.CLIENT_URL}/login" style="display:inline-block;margin-top:16px;padding:12px 28px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">Sign In Now</a>
+          </div>
+        `,
+      });
+      emailSent = true;
+    } catch (emailError) {
+      console.error("Email send failed (user still created):", emailError.message);
+    }
+
+    // Always return success — if email failed, include password so admin can share manually
+    return res.status(201).json({
+      message: emailSent
+        ? `User created and credentials sent to ${email}`
+        : `User created successfully. Email delivery failed — please share these credentials manually.`,
+      emailSent,
+      ...(emailSent ? {} : { generatedPassword: rawPassword }),
+    });
+  } catch (error) {
+    console.error("addUser error:", error);
+    res.status(500).json({ message: "Failed to add user", error: error.message });
+  }
+};
+
 
 // Delete a user by ID (admin only)
 exports.deleteUser = async (req, res) => {

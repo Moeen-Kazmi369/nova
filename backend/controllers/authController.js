@@ -4,72 +4,14 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const transporter = require("../config/nodemailer");
 
-const generateOTP = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
-
-const sendOTPEmail = async (email, otp) => {
+const sendResetPasswordEmail = async (email, resetToken) => {
+  const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
   await transporter.sendMail({
-    from: `"No Reply" <${process.env.SMTP_USER}>`,
+    from: `"No Reply" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: "Your email verification OTP",
-    text: `Your OTP is ${otp}. It will expire in 15 minutes.`,
+    subject: "Password reset request",
+    text: `Reset your password using the following link: ${resetUrl}. This link expires in 30 minutes.`,
   });
-};
-
-exports.register = async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser)
-      return res.status(400).json({ message: "Email already registered" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const otp = generateOTP();
-    const otpExpireAt = Date.now() + 15 * 60 * 1000; // 15 mins
-
-    const user = new User({
-      name,
-      email,
-      password: hashedPassword,
-      role: role || "user",
-      emailVerificationOTP: otp,
-      otpExpireAt,
-    });
-
-    await user.save();
-    await sendOTPEmail(email, otp);
-
-    res
-      .status(201)
-      .json({ message: "User registered. Verification OTP sent to email." });
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-exports.verifyEmailOTP = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user) return res.status(400).json({ message: "Invalid email" });
-    if (user.isVerified)
-      return res.status(400).json({ message: "User already verified" });
-    if (user.emailVerificationOTP !== otp)
-      return res.status(400).json({ message: "Invalid OTP" });
-    if (user.otpExpireAt < Date.now())
-      return res.status(400).json({ message: "OTP expired" });
-
-    user.isVerified = true;
-    user.emailVerificationOTP = undefined;
-    user.otpExpireAt = undefined;
-    await user.save();
-
-    res.json({ message: "Email verified successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Server error" });
-  }
 };
 
 exports.login = async (req, res) => {
@@ -77,8 +19,6 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
-    if (!user.isVerified)
-      return res.status(400).json({ message: "Email not verified" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
@@ -90,20 +30,10 @@ exports.login = async (req, res) => {
       { expiresIn: "10d" }
     );
 
-    res.json({ token, role: user.role, name: user.name, email: user.email,userId:user?._id });
+    res.json({ token, role: user.role, name: user.name, email: user.email, userId: user?._id });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
-};
-
-const sendResetPasswordEmail = async (email, resetToken) => {
-  const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
-  await transporter.sendMail({
-    from: `"No Reply" <${process.env.SMTP_USER}>`,
-    to: email,
-    subject: "Password reset request",
-    text: `Reset your password using the following link: ${resetUrl}. This link expires in 30 minutes.`,
-  });
 };
 
 exports.forgotPassword = async (req, res) => {

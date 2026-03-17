@@ -144,15 +144,6 @@ const Login = () => {
               Click here
             </Link>
           </p>
-          <p className="mt-2 text-center text-sm text-gray-300">
-            Don't have an account?{" "}
-            <Link
-              to={`/register?redirect=${encodeURIComponent(redirect)}`}
-              className="text-blue-400 hover:text-blue-300 font-medium"
-            >
-              Register
-            </Link>
-          </p>
         </form>
       </div>
     </div>

@@ -6,7 +6,9 @@ const router = express.Router();
 // Protect all routes and authorize only admins
 router.use(protect, authorizeRoles("admin"));
 
+// User management
 router.get("/users", adminController.getUsers);
+router.post("/users", adminController.addUser);
 router.delete("/users/:userId", adminController.deleteUser);
 
 // AI Model CRUD

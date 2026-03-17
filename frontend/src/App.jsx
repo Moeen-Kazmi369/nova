@@ -7,7 +7,6 @@ import UserHomePage from "./user/pages/HomePage";
 import VoiceModePage from "./user/pages/VoiceModePage";
 import MicAccessPage from "./user/pages/MicAccessPage";
 import Login from "./user/pages/Login";
-import Register from "./user/pages/Register";
 import ForgotPassword from "./user/pages/ForgotPassword";
 import ResetPassword from "./user/pages/ResetPassword";
 import UserProtectRoutes from "./user/components/ProtectRoutes";
@@ -18,7 +17,6 @@ import AccessDenied from "./user/pages/AccessDenied";
 import AdminHomePage from "./admin/pages/HomePage";
 import AdminProtectRoutes from "./admin/components/ProtectRoutes";
 import AboutPage from "./user/pages/AboutPage";
-import VerifyOTP from "./user/pages/VerifyOTP";
 import Dashboard from "./admin/pages/Dashboard";
 import AIModelConfig from "./admin/pages/AIModelConfig";
 
@@ -27,11 +25,9 @@ export default function App() {
     <Router>
       <Toaster position="top-right" />
       <Routes>
-        {/* Auth Routes */}
-        <Route path="/register" element={<Register />} />
+        {/* Auth Routes — Login only (no public registration) */}
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/access-denied" element={<AccessDenied />} />
 

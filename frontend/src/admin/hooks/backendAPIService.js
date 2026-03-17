@@ -47,6 +47,23 @@ export function useDeleteUser() {
   });
 }
 
+/** Admin: Add a new user (admin generates password, sends credentials email) */
+export const addUser = async (userData) => {
+  const { data } = await apiClient.post("/users", userData);
+  return data;
+};
+
+export function useAddUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: addUser,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+    },
+  });
+}
+
+
 /** Admin: Create AI Model */
 export const createAIModel = async (modelData) => {
   const { data } = await apiClient.post("/models", modelData, {

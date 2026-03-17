@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Trash2, Plus, User, Layers, LogOut } from "lucide-react";
+import { Trash2, Plus, User, Layers, LogOut, UserPlus, Mail, X } from "lucide-react";
 import { Dialog } from "@headlessui/react";
 import Icon from "../../assets/Icon.png";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -7,20 +7,20 @@ import { toast } from "sonner";
 import {
   useGetUsers,
   useDeleteUser,
+  useAddUser,
   useGetAllAIModelsForAdmin,
   useDeleteAIModel,
 } from "../hooks/backendAPIService";
-import axios from "axios";
 
 export default function Dashboard() {
   const [selectedNav, setSelectedNav] = useState("users");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isInviteModal, setIsInviteModal] = useState(false);
+  const [isAddUserModal, setIsAddUserModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [modelToDelete, setModelToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [email, setEmail] = useState("");
-  const [inviteLink, setInviteLink] = useState("");
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -37,22 +37,36 @@ export default function Dashboard() {
   } = useGetAllAIModelsForAdmin();
   const deleteUser = useDeleteUser();
   const deleteAIModel = useDeleteAIModel();
+  const addUser = useAddUser();
+
   useEffect(() => {
     const navOption =
       new URLSearchParams(location.search).get("navOption") || "users";
     setSelectedNav(navOption);
   }, [location.pathname]);
-  // Generate invite link
-  const handleGenerateLink = () => {
-    // Simulate invite link generation
-    setInviteLink(
-      `${window.location.origin}/login?email=${encodeURIComponent(email)}`
-    );
-  };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(inviteLink);
-    toast.success("Invite link copied to clipboard");
+  // Handle adding a new user
+  const handleAddUser = () => {
+    if (!newUserName.trim() || !newUserEmail.trim()) {
+      toast.error("Please fill in both name and email");
+      return;
+    }
+    addUser.mutate(
+      { name: newUserName.trim(), email: newUserEmail.trim() },
+      {
+        onSuccess: (data) => {
+          toast.success(data?.message || "User added and credentials sent!");
+          setIsAddUserModal(false);
+          setNewUserName("");
+          setNewUserEmail("");
+        },
+        onError: (err) => {
+          toast.error(
+            err?.response?.data?.message || "Failed to add user"
+          );
+        },
+      }
+    );
   };
 
   // Modal open handler for user deletion
@@ -257,11 +271,12 @@ export default function Dashboard() {
             </button>
           ) : (
             <button
-              className="px-3 py-2 text-sm md:px-6 md:py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700"
-              onClick={() => setIsInviteModal(true)}
+              className="flex items-center gap-2 px-3 py-2 text-sm md:px-4 md:py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition"
+              onClick={() => setIsAddUserModal(true)}
             >
-              <span className="hidden sm:inline">Generate Invite Link</span>
-              <span className="sm:hidden">Invite</span>
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">Add New User</span>
+              <span className="sm:hidden">Add</span>
             </button>
           )}
         </header>
@@ -392,62 +407,120 @@ export default function Dashboard() {
         </div>
       </Dialog>
 
-      {/* Invite Link Modal */}
+      {/* Add New User Modal */}
       <Dialog
-        open={isInviteModal}
-        onClose={() => setIsInviteModal(false)}
+        open={isAddUserModal}
+        onClose={() => {
+          if (!addUser.isPending) {
+            setIsAddUserModal(false);
+            setNewUserName("");
+            setNewUserEmail("");
+          }
+        }}
         className="fixed z-50 inset-0 overflow-y-auto"
       >
         <div className="flex items-center justify-center min-h-screen px-4">
-          <div className="fixed inset-0 bg-black opacity-50" />
-          <Dialog.Panel className="bg-gray-900 rounded max-w-sm mx-auto p-6 z-50 text-white w-full md:w-auto">
-            <Dialog.Title className="text-lg font-bold mb-4">
-              Generate Invite Link
-            </Dialog.Title>
-
-            <input
-              type="email"
-              placeholder="Enter user email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-700 bg-gray-900 text-white placeholder-gray-400 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm md:text-base"
-            />
-
-            <button
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mb-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-base"
-              onClick={handleGenerateLink}
-              disabled={!email}
-            >
-              Generate Link
-            </button>
-
-            {inviteLink && (
-              <div className="flex flex-col md:flex-row items-center gap-2 mt-2">
-                <input
-                  type="text"
-                  value={inviteLink}
-                  readOnly
-                  className="flex-1 border border-gray-700 bg-gray-900 text-white rounded px-2 py-1 text-sm"
-                />
-                <button
-                  className="w-full md:w-auto px-2 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 text-sm"
-                  onClick={handleCopy}
-                >
-                  Copy
-                </button>
+          <div className="fixed inset-0 bg-black opacity-60" />
+          <Dialog.Panel className="relative bg-gray-900 border border-gray-700 rounded-xl max-w-md mx-auto p-6 z-50 text-white w-full shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600 rounded-lg">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <Dialog.Title className="text-lg font-bold">
+                  Add New User
+                </Dialog.Title>
               </div>
-            )}
+              <button
+                onClick={() => {
+                  setIsAddUserModal(false);
+                  setNewUserName("");
+                  setNewUserEmail("");
+                }}
+                className="p-1 rounded hover:bg-gray-700 text-gray-400 hover:text-white transition"
+                disabled={addUser.isPending}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <button
-              className={`mt-4 w-full px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 text-sm md:text-base`}
-              onClick={() => {
-                setIsInviteModal(false);
-                setEmail("");
-                setInviteLink("");
-              }}
-            >
-              Close
-            </button>
+            <p className="text-sm text-gray-400 mb-5">
+              Enter the user's details below. A secure password will be automatically generated and emailed to them.
+            </p>
+
+            {/* Name field */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+              <input
+                type="text"
+                placeholder="e.g. John Doe"
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+                className="w-full border border-gray-700 bg-gray-800 text-white placeholder-gray-500 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
+                disabled={addUser.isPending}
+              />
+            </div>
+
+            {/* Email field */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input
+                  type="email"
+                  placeholder="user@example.com"
+                  value={newUserEmail}
+                  onChange={(e) => setNewUserEmail(e.target.value)}
+                  className="w-full border border-gray-700 bg-gray-800 text-white placeholder-gray-500 rounded-lg pl-9 pr-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-600 text-sm"
+                  disabled={addUser.isPending}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddUser()}
+                />
+              </div>
+            </div>
+
+            {/* Info box */}
+            <div className="flex items-start gap-2 bg-blue-950 border border-blue-800 rounded-lg px-3 py-2.5 mb-6">
+              <span className="text-blue-400 text-lg leading-none mt-0.5">ℹ</span>
+              <p className="text-xs text-blue-300">
+                A secure password will be auto-generated and sent to the user's email along with their login credentials.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setIsAddUserModal(false);
+                  setNewUserName("");
+                  setNewUserEmail("");
+                }}
+                className="flex-1 px-4 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 text-sm font-medium transition"
+                disabled={addUser.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddUser}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={addUser.isPending || !newUserName.trim() || !newUserEmail.trim()}
+              >
+                {addUser.isPending ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4" />
+                    Add User & Send Credentials
+                  </>
+                )}
+              </button>
+            </div>
           </Dialog.Panel>
         </div>
       </Dialog>
