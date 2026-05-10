@@ -11,6 +11,7 @@ const mongoose = require("mongoose");
 const { detectWakeWord } = require("../utils/wakeWord");
 const NovaAceProfile = require("../models/NovaAceProfile");
 const TaskDraft = require("../models/TaskDraft");
+const taskController = require("./taskController");
 
 const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -99,7 +100,7 @@ Refine user intent into a high-quality, deterministic **TaskDraft**. Your job is
 
 ## BEHAVIORAL RULES:
 - **Clarification:** Ask sharp, professional clarifying questions only when necessary. If you can infer a detail from the Knowledge Base, suggest it instead of asking.
-- **Drafting:** When the task is "strong enough" (has a clear Objective, Audience, and Deliverable), call the \`save_task_draft\` tool immediately.
+- **Drafting (CRITICAL):** When the task is "strong enough" (has a clear Objective, Audience, and Deliverable), **call the \`save_task_draft\` tool IMMEDIATELY**. Do not ask for permission to save. Just save it and tell the user: "I have drafted the task [TASK_DRAFT_ID]. You can review it in the Task Composer."
 - **Tone:** ${profile.instructions || "Professional, executive-grade, and proactive."}
 - **Speaking Style:** ${profile.voice_preferences?.speaking_style || "Professional"}
 - **Domain Focus:** ${profile.voice_preferences?.domain_focus || "General"}
@@ -265,7 +266,7 @@ exports.userTextPrompt = async (req, res) => {
         const toolCall = completion.choices[0].message.tool_calls[0];
         if (toolCall.function.name === "save_task_draft") {
           pendingDraftContent = JSON.parse(toolCall.function.arguments);
-          aiReply = `I have successfully drafted the task: **${pendingDraftContent.title}**. You can review and approve it in the Task Composer.`;
+          aiReply = `I have successfully drafted the task: **${pendingDraftContent.title}**. You can review and approve it in the Task Composer. [TASK_DRAFT_ID: PENDING]`;
         }
       }
 
@@ -340,11 +341,14 @@ exports.userTextPrompt = async (req, res) => {
           conversationId: conversation._id,
           content: pendingDraftContent,
         });
+        // Trigger real-time signal
+        taskController.notifyDraftCreated(userId, taskDraft._id);
       }
 
       res.json({
         conversationId: conversation._id,
         reply: aiReply,
+        taskDraftId: taskDraft?._id, // 👈 THE TRIGGER
         conversationName: conversation.conversationName,
         wasLocal: !!isLocalConversation,
         previousLocalConversationId: isLocalConversation
@@ -703,12 +707,16 @@ exports.elevenLabsLLM = async (req, res) => {
     if (toolCallArguments) {
       try {
         const draftContent = JSON.parse(toolCallArguments);
-        await TaskDraft.create({
-          userId: userId || req.body.elevenlabs_extra_body?.userId,
+        const finalUserId = userId || req.body.elevenlabs_extra_body?.userId;
+        const draft = await TaskDraft.create({
+          userId: finalUserId,
           conversationId: conversation._id,
           content: draftContent,
         });
         console.log(`[VoiceMode] Task draft saved: ${draftContent.title}`);
+        
+        // Trigger real-time signal
+        taskController.notifyDraftCreated(finalUserId, draft._id);
       } catch (e) {
         console.error("Failed to parse or save task draft from voice stream:", e);
       }

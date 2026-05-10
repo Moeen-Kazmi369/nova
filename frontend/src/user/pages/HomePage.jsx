@@ -18,6 +18,7 @@ import ChatSidebar from "../components/ChatSidebar";
 import { LoadingScreen } from "../components/LoadingScreen";
 import TaskComposer from "../components/TaskComposer";
 import NovaAceProfileEditor from "../components/NovaAceProfileEditor";
+import { useNovaEvents } from "../hooks/useNovaEvents";
 import { toast } from "sonner";
 import axios from "axios";
 import {
@@ -58,28 +59,12 @@ function HomePage() {
   const [activeDraftId, setActiveDraftId] = useState(null);
   const navigate = useNavigate();
 
-  const checkForNewDrafts = useCallback(async () => {
-    try {
-      const userData = JSON.parse(localStorage.getItem("user"));
-      const token = userData?.token;
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_API_URI}/api/tasks/drafts`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const latestDraft = res.data[0];
-      if (latestDraft && latestDraft.status === "draft" && latestDraft.conversationId === selectedChatId) {
-        if (latestDraft._id !== activeDraftId) {
-          setActiveDraftId(latestDraft._id);
-        }
-      }
-    } catch (err) {
-      console.error("Draft check failed:", err);
-    }
-  }, [selectedChatId, activeDraftId]);
+  const userData = JSON.parse(localStorage.getItem("user"));
+  const userId = userData?._id || userData?.id;
 
-  useEffect(() => {
-    const interval = setInterval(checkForNewDrafts, 5000);
-    return () => clearInterval(interval);
-  }, [checkForNewDrafts]);
+  useNovaEvents(userId, (draftId) => {
+    setActiveDraftId(draftId);
+  });
 
   // Fetch data using hooks
   const {
@@ -377,9 +362,14 @@ function HomePage() {
       selectedFiles.forEach((file) => {
         promptData.append("files", file);
       });
-      const { reply, conversationId, conversationName, wasLocal, previousLocalConversationId } = await userTextPrompt.mutateAsync(
+      const { reply, conversationId, conversationName, wasLocal, previousLocalConversationId, taskDraftId } = await userTextPrompt.mutateAsync(
         promptData,
         {
+          onSuccess: (data) => {
+            if (data.taskDraftId) {
+              setActiveDraftId(data.taskDraftId);
+            }
+          },
           onSettled: () => {
             setIsProcessing(false);
           },

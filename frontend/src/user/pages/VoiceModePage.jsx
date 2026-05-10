@@ -6,6 +6,7 @@ import { CircularWaveform } from "../components/CircularWaveform";
 import { MenuOverlay } from "../components/MenuOverlay";
 import TaskComposer from "../components/TaskComposer";
 import { detectWakeWord } from "../utils/wakeWord";
+import { useNovaEvents } from "../hooks/useNovaEvents";
 import axios from "axios";
 
 const VoiceModePage = () => {
@@ -26,30 +27,12 @@ const VoiceModePage = () => {
   const conversationId = searchParams.get("conversationId");
   const aiModelName = searchParams.get("aiModelName");
 
-  const checkForNewDrafts = useCallback(async () => {
-    try {
-      const userData = JSON.parse(localStorage.getItem("user"));
-      const token = userData?.token;
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_API_URI}/api/tasks/drafts`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      // If there's a new draft for this conversation that wasn't there before
-      const latestDraft = res.data[0];
-      if (latestDraft && latestDraft.status === "draft" && latestDraft.conversationId === conversationId) {
-        if (latestDraft._id !== activeDraftId) {
-          setActiveDraftId(latestDraft._id);
-        }
-      }
-    } catch (err) {
-      console.error("Draft check failed:", err);
-    }
-  }, [conversationId, activeDraftId]);
+  const userData = JSON.parse(localStorage.getItem("user"));
+  const userId = userData?._id || userData?.id;
 
-  useEffect(() => {
-    // Poll for new drafts every 5 seconds when in voice mode
-    draftCheckInterval.current = setInterval(checkForNewDrafts, 5000);
-    return () => clearInterval(draftCheckInterval.current);
-  }, [checkForNewDrafts]);
+  useNovaEvents(userId, (draftId) => {
+    setActiveDraftId(draftId);
+  });
   const conversation = useConversation({
     micMuted: !micOn,
     onConnect: () => console.log("Connected"),
@@ -58,7 +41,13 @@ const VoiceModePage = () => {
     },
     onError: (err) => console.error("Conversation error:", err),
     onMessage: (message) => {
-      console.log("Received message:", message);
+      console.log("Message:", message);
+      // Look for the Task Draft trigger in the message text
+      if (message.message && (message.message.includes("TASK_DRAFT_ID") || message.message.includes("drafted the task"))) {
+        console.log("Task draft detected in voice message, triggering poll...");
+        checkForNewDrafts(); // Trigger an immediate poll
+      }
+      
       // Guard: only update or process if this was a wake-word-triggered response
       if (message.source === "user") {
         const { triggered } = detectWakeWord(message.message || message.text || "");

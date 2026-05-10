@@ -5,6 +5,7 @@ const router = express.Router();
 
 router.use(protect);
 
+router.get("/events", taskController.eventsHandler); // SSE Channel
 router.get("/profile", taskController.getOrCreateProfile);
 router.patch("/profile", taskController.updateProfile);
 
