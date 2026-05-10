@@ -5,6 +5,7 @@ const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const userRoutes = require("./routes/userRoutes");
+const taskRoutes = require("./routes/taskRoutes");
 const { elevenLabsLLM } = require("./controllers/userController");
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/tasks", taskRoutes);
 // ElevenLabs Custom LLM endpoint (OpenAI-compatible)
 app.post("/v1/chat/completions", elevenLabsLLM);
 app.get("/", (req, res) => {

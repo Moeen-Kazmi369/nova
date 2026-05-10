@@ -4,7 +4,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Menu, Mic, MicOff } from "lucide-react";
 import { CircularWaveform } from "../components/CircularWaveform";
 import { MenuOverlay } from "../components/MenuOverlay";
+import TaskComposer from "../components/TaskComposer";
 import { detectWakeWord } from "../utils/wakeWord";
+import axios from "axios";
 
 const VoiceModePage = () => {
   const navigate = useNavigate();
@@ -13,13 +15,41 @@ const VoiceModePage = () => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > 768);
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   const [micOn, setMicOn] = useState(true);
-  const hasStartedSession = useRef(false); // ← KEY: ref, not state
-  // Get aiModelId and conversationId from URL query parameters
+  const [activeDraftId, setActiveDraftId] = useState(null);
+  const hasStartedSession = useRef(false);
+  const draftCheckInterval = useRef(null);
+
+  // ... existing conversation logic ...
+
   const aiModelId = searchParams.get("aiModelId");
   const aiModelIdFirstMessage = searchParams.get("aiModelIdFirstMessage");
   const conversationId = searchParams.get("conversationId");
   const aiModelName = searchParams.get("aiModelName");
 
+  const checkForNewDrafts = useCallback(async () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem("user"));
+      const token = userData?.token;
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_API_URI}/api/tasks/drafts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // If there's a new draft for this conversation that wasn't there before
+      const latestDraft = res.data[0];
+      if (latestDraft && latestDraft.status === "draft" && latestDraft.conversationId === conversationId) {
+        if (latestDraft._id !== activeDraftId) {
+          setActiveDraftId(latestDraft._id);
+        }
+      }
+    } catch (err) {
+      console.error("Draft check failed:", err);
+    }
+  }, [conversationId, activeDraftId]);
+
+  useEffect(() => {
+    // Poll for new drafts every 5 seconds when in voice mode
+    draftCheckInterval.current = setInterval(checkForNewDrafts, 5000);
+    return () => clearInterval(draftCheckInterval.current);
+  }, [checkForNewDrafts]);
   const conversation = useConversation({
     micMuted: !micOn,
     onConnect: () => console.log("Connected"),
@@ -230,6 +260,16 @@ const VoiceModePage = () => {
       </div>
 
       <MenuOverlay isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+      {activeDraftId && (
+        <TaskComposer
+          draftId={activeDraftId}
+          onClose={() => setActiveDraftId(null)}
+          onApproved={() => {
+            console.log("Task approved!");
+            // Optionally navigate or show success
+          }}
+        />
+      )}
     </>
   );
 };

@@ -9,6 +9,8 @@ const openaiClient = require("../config/openai");
 const openai = require("openai");
 const mongoose = require("mongoose");
 const { detectWakeWord } = require("../utils/wakeWord");
+const NovaAceProfile = require("../models/NovaAceProfile");
+const TaskDraft = require("../models/TaskDraft");
 
 const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -52,6 +54,63 @@ async function generateConversationName(openaiClient, messageText) {
     temperature: 0.5,
   });
   return response.choices[0].message.content.trim().replace(/["']/g, "");
+}
+
+const TASK_DRAFT_TOOL = {
+  type: "function",
+  function: {
+    name: "save_task_draft",
+    description: "Saves a high-quality task draft composed during the conversation.",
+    parameters: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Clear, concise title for the task." },
+        objective: { type: "string", description: "The primary goal/outcome of the task." },
+        audience: { type: "string", description: "Who this task is being performed for." },
+        deliverable_type: { type: "string", description: "The type of output (e.g., slide_deck, report, code)." },
+        output_format: { type: "string", description: "File format (e.g., pptx, md, js)." },
+        key_topics: { type: "array", items: { type: "string" }, description: "Core topics to be covered." },
+        constraints: { type: "array", items: { type: "string" }, description: "Specific rules or limitations." },
+        proposed_roles: { type: "array", items: { type: "string" }, description: "Suggested agent roles (e.g., COO, Worker, Grader)." },
+        priority: { type: "string", enum: ["low", "normal", "high"], default: "normal" }
+      },
+      required: ["title", "objective", "audience", "deliverable_type"]
+    }
+  }
+};
+
+async function getNovaAceSystemPrompt(userId, model) {
+  let profile = await NovaAceProfile.findOne({ userId });
+  if (!profile) {
+    profile = await NovaAceProfile.create({ userId });
+  }
+
+  return `
+# IDENTITY: NOVA ACE (Architectural Task Composer)
+You are the high-intelligence conversational front-end for ACEPLACE Workstation. You are not a generic assistant; you are a **Task Architect**.
+
+## GOAL:
+Refine user intent into a high-quality, deterministic **TaskDraft**. Your job is to move from vague speech to a structured execution plan.
+
+## INTELLIGENCE & GROUNDING:
+1. **Use Knowledge Proactively:** Do not just wait for the user to give you details. Look at the provided CONTEXT (Knowledge Base). If you find relevant company standards, target audiences, or technical roadmaps, **proactively suggest** them for the TaskDraft.
+2. **Synthesize, Don't Just Repeat:** If a user says "I want a report," and your knowledge base contains "Standard Q3 Branding Guidelines," suggest that the report must follow those guidelines under the 'Constraints' field.
+3. **Suggested Roles:** Based on the complexity of the task, intelligently suggest roles in the 'proposed_roles' array (e.g., "Researcher" for data gathering, "Grader" for quality control, "Worker" for execution).
+
+## BEHAVIORAL RULES:
+- **Clarification:** Ask sharp, professional clarifying questions only when necessary. If you can infer a detail from the Knowledge Base, suggest it instead of asking.
+- **Drafting:** When the task is "strong enough" (has a clear Objective, Audience, and Deliverable), call the \`save_task_draft\` tool immediately.
+- **Tone:** ${profile.instructions || "Professional, executive-grade, and proactive."}
+- **Speaking Style:** ${profile.voice_preferences?.speaking_style || "Professional"}
+- **Domain Focus:** ${profile.voice_preferences?.domain_focus || "General"}
+
+## TASK SHAPING POLICY:
+- If it's a presentation, suggest an audience and key slides.
+- If it's code, suggest constraints like "must include unit tests."
+- Always look for "Key Topics" in the provided knowledge base to enrich the draft.
+
+${model.apiConfig?.systemPrompt || ""}
+`;
 }
 
 exports.userTextPrompt = async (req, res) => {
@@ -135,24 +194,7 @@ exports.userTextPrompt = async (req, res) => {
         console.error("RAG retrieval failed:", e);
       }
       // Prepare messages for OpenAI chat
-      const systemPrompt = `
-Always write responses in **GitHub-flavored Markdown**:
-- Use headings, bullet lists, and numbered steps when helpful.
-- For code, use fenced blocks with language hints, e.g. \`\`\`js, \`\`\`ts, \`\`\`bash.
-- Prefer concise sections with clear formatting.
-
-**About Images and Attachments:**
-- When users upload images, you receive analyzed descriptions of those images.
-- Refer to the "ANALYZED IMAGES" section for these descriptions.
-- Answer questions about user-uploaded images based on these descriptions.
-
-**Agent Capabilities:**
-- You can analyze and summarize images shared by users.
-- You are available for both text-based chat and real-time voice conversations.
-- Respond naturally and conversationally in all interactions.
-
-${model.apiConfig?.systemPrompt || "You are a helpful assistant."}
-`;
+      const systemPrompt = await getNovaAceSystemPrompt(userId, model);
 
       const temperature = model.apiConfig?.temperature || 0.2;
       const maxTokens = model.apiConfig?.maxTokens || 1000;
@@ -211,10 +253,23 @@ ${model.apiConfig?.systemPrompt || "You are a helpful assistant."}
         messages,
         max_tokens: maxTokens,
         temperature,
+        tools: [TASK_DRAFT_TOOL],
+        tool_choice: "auto",
       });
 
-      const aiReply =
-        completion.choices[0].message?.content || "No response generated";
+      let aiReply = completion.choices[0].message?.content || "";
+      let pendingDraftContent = null;
+      let taskDraft = null;
+
+      if (completion.choices[0].message?.tool_calls) {
+        const toolCall = completion.choices[0].message.tool_calls[0];
+        if (toolCall.function.name === "save_task_draft") {
+          pendingDraftContent = JSON.parse(toolCall.function.arguments);
+          aiReply = `I have successfully drafted the task: **${pendingDraftContent.title}**. You can review and approve it in the Task Composer.`;
+        }
+      }
+
+      if (!aiReply) aiReply = "No response generated";
 
       // Create or update conversation
       let conversation;
@@ -277,6 +332,15 @@ ${model.apiConfig?.systemPrompt || "You are a helpful assistant."}
 
       conversation.updatedAt = new Date();
       await conversation.save();
+
+      // Create TaskDraft if pending
+      if (pendingDraftContent) {
+        taskDraft = await TaskDraft.create({
+          userId,
+          conversationId: conversation._id,
+          content: pendingDraftContent,
+        });
+      }
 
       res.json({
         conversationId: conversation._id,
@@ -558,25 +622,7 @@ exports.elevenLabsLLM = async (req, res) => {
         }
       }
     }
-    const systemPrompt =
-      model.apiConfig?.systemPrompt +
-        `
-      **Image Analysis in Voice Mode:**
-      - When users mention images or ask about previously shared images, refer to the analyzed image descriptions already provided in the ANALYZED IMAGES sections.
-      - These are pre-analyzed images from the current conversation.
-      - Answer questions about these images based on the provided descriptions.
-
-      **Agent Capabilities:**
-      - You can analyze and summarize images shared by users.
-      - You are available for both text-based chat and real-time voice conversations.
-      - Respond naturally and conversationally in both mediums.
-
-      **Strict Instruction for Response Generation:**
-
-1.  **NO TRADEMARKS:** When generating any response, you must strictly exclude all trademark, registered, or service mark symbols ($™, ®, SM$) from the specific product name "NOVA 1000".
-2.  **Required Format:** The name must *always* be rendered as **NOVA 1000**.
-3.  **Forbidden Format:** You must **never** use "NOVA 1000™", "NOVA 1000®", or any similar variation.` ||
-      "You are a careful assistant. Use the provided CONTEXT; if insufficient, say so.";
+    const systemPrompt = await getNovaAceSystemPrompt(userId || req.body.elevenlabs_extra_body?.userId, model);
 
     // Build messages: system → context → history → user
     const msgs = [{ role: "system", content: systemPrompt }];
@@ -625,20 +671,46 @@ exports.elevenLabsLLM = async (req, res) => {
       max_tokens: model.apiConfig?.maxTokens || 500,
       temperature: model.apiConfig?.temperature ?? 0.7,
       stream: true,
+      tools: [TASK_DRAFT_TOOL],
+      tool_choice: "auto",
     });
 
     let aiReply = "";
+    let toolCallArguments = "";
+    let toolCallId = "";
+
     for await (const chunk of stream) {
-      // ✅ Key change: send the *raw OpenAI chunk object* (like your old controller)
-      // Many voice agents (incl. ElevenLabs) expect this exact structure.
-      const piece = chunk.choices?.[0]?.delta?.content || "";
+      const delta = chunk.choices?.[0]?.delta;
+      const piece = delta?.content || "";
       if (piece) aiReply += piece;
+
+      // Collect tool call arguments if present
+      if (delta?.tool_calls?.[0]) {
+        const tc = delta.tool_calls[0];
+        if (tc.id) toolCallId = tc.id;
+        if (tc.function?.arguments) toolCallArguments += tc.function.arguments;
+      }
 
       try {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
       } catch (e) {
         console.error("SSE write error:", e?.message);
         break;
+      }
+    }
+
+    // Process tool call if completed
+    if (toolCallArguments) {
+      try {
+        const draftContent = JSON.parse(toolCallArguments);
+        await TaskDraft.create({
+          userId: userId || req.body.elevenlabs_extra_body?.userId,
+          conversationId: conversation._id,
+          content: draftContent,
+        });
+        console.log(`[VoiceMode] Task draft saved: ${draftContent.title}`);
+      } catch (e) {
+        console.error("Failed to parse or save task draft from voice stream:", e);
       }
     }
 

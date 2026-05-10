@@ -16,7 +16,10 @@ import {
 } from "lucide-react";
 import ChatSidebar from "../components/ChatSidebar";
 import { LoadingScreen } from "../components/LoadingScreen";
+import TaskComposer from "../components/TaskComposer";
+import NovaAceProfileEditor from "../components/NovaAceProfileEditor";
 import { toast } from "sonner";
+import axios from "axios";
 import {
   useGetAllAIModels,
   useGetUserConversations,
@@ -42,6 +45,7 @@ function HomePage() {
   const [isDeletingChatId, setIsDeletingChatId] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileEditorOpen, setIsProfileEditorOpen] = useState(false);
   // Placeholder states for voice features (unchanged)
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -51,7 +55,31 @@ function HomePage() {
   const [permissionStatus, setPermissionStatus] = useState("granted");
   const [chatMessages, setChatMessages] = useState([]);
   const [localConversations, setLocalConversations] = useState([]);
+  const [activeDraftId, setActiveDraftId] = useState(null);
   const navigate = useNavigate();
+
+  const checkForNewDrafts = useCallback(async () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem("user"));
+      const token = userData?.token;
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_API_URI}/api/tasks/drafts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const latestDraft = res.data[0];
+      if (latestDraft && latestDraft.status === "draft" && latestDraft.conversationId === selectedChatId) {
+        if (latestDraft._id !== activeDraftId) {
+          setActiveDraftId(latestDraft._id);
+        }
+      }
+    } catch (err) {
+      console.error("Draft check failed:", err);
+    }
+  }, [selectedChatId, activeDraftId]);
+
+  useEffect(() => {
+    const interval = setInterval(checkForNewDrafts, 5000);
+    return () => clearInterval(interval);
+  }, [checkForNewDrafts]);
 
   // Fetch data using hooks
   const {
@@ -726,7 +754,23 @@ function HomePage() {
         handleNavigateToVoiceMode={handleNavigateToVoiceMode}
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
+        onOpenProfileEditor={() => setIsProfileEditorOpen(true)}
       />
+
+      {isProfileEditorOpen && (
+        <NovaAceProfileEditor onClose={() => setIsProfileEditorOpen(false)} />
+      )}
+
+      {activeDraftId && (
+        <TaskComposer
+          draftId={activeDraftId}
+          onClose={() => setActiveDraftId(null)}
+          onApproved={() => {
+            toast.success("Task approved and ready for execution!");
+            setActiveDraftId(null);
+          }}
+        />
+      )}
     </>
   );
 

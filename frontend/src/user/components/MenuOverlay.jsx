@@ -9,7 +9,7 @@ import SettingsIcon from "../../assets/Settings.svg";
 import AboutIcon from "../../assets/About.svg";
 import WaveIcon from "../../assets/WaveIcon.png"; // 👈 New icon import
 
-export const MenuOverlay = ({ isOpen, onClose, handleNavigateToVoiceMode }) => {
+export const MenuOverlay = ({ isOpen, onClose, handleNavigateToVoiceMode, onOpenProfileEditor }) => {
   const navigate = useNavigate();
   const overlayRef = useRef(null);
 
@@ -43,9 +43,14 @@ export const MenuOverlay = ({ isOpen, onClose, handleNavigateToVoiceMode }) => {
     },
     {
       icon: SettingsIcon,
-      title: "Settings",
-      description: "Customize your NOVA experience",
-      action: onClose,
+      title: "NOVA ACE Profile",
+      description: "Configure intelligence & instructions",
+      action: () => {
+        if (typeof onOpenProfileEditor === 'function') {
+          onOpenProfileEditor();
+          onClose();
+        }
+      },
       current: false,
     },
     {
