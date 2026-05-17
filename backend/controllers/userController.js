@@ -65,6 +65,7 @@ const TASK_DRAFT_TOOL = {
     parameters: {
       type: "object",
       properties: {
+        task_draft_id: { type: "string", description: "Unique identifier for this draft (e.g., draft_001)." },
         title: { type: "string", description: "Clear, concise title for the task." },
         objective: { type: "string", description: "The primary goal/outcome of the task." },
         audience: { type: "string", description: "Who this task is being performed for." },
@@ -72,10 +73,11 @@ const TASK_DRAFT_TOOL = {
         output_format: { type: "string", description: "File format (e.g., pptx, md, js)." },
         key_topics: { type: "array", items: { type: "string" }, description: "Core topics to be covered." },
         constraints: { type: "array", items: { type: "string" }, description: "Specific rules or limitations." },
+        attachments: { type: "array", items: { type: "string" }, description: "List of attached files or URLs." },
         proposed_roles: { type: "array", items: { type: "string" }, description: "Suggested agent roles (e.g., COO, Worker, Grader)." },
         priority: { type: "string", enum: ["low", "normal", "high"], default: "normal" }
       },
-      required: ["title", "objective", "audience", "deliverable_type"]
+      required: ["title", "objective", "audience", "deliverable_type", "output_format", "key_topics", "constraints", "proposed_roles", "priority"]
     }
   }
 };
