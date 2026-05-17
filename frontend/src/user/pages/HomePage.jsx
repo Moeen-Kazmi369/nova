@@ -572,6 +572,7 @@ function HomePage() {
                       isUser={message.sender === "user"}
                       timestamp={new Date(message.timestamp)}
                       setIsSpeaking={setIsSpeaking}
+                      onOpenDraft={setActiveDraftId}
                     />
                   ))
                 )}

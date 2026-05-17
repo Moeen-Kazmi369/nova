@@ -119,16 +119,72 @@ const TaskComposer = ({ draftId, onClose, onApproved }) => {
             )}
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Proposed Roles</label>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {draft.content.proposed_roles.map((role, i) => (
-                <span key={i} className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-xs font-medium">
-                  {role}
-                </span>
-              ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Audience</label>
+              {isEditing ? (
+                <input
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editedContent.audience}
+                  onChange={(e) => setEditedContent({ ...editedContent, audience: e.target.value })}
+                />
+              ) : (
+                <p className="text-gray-300">{draft.content.audience}</p>
+              )}
+            </div>
+            
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Priority</label>
+              {isEditing ? (
+                <select
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-white outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editedContent.priority || "normal"}
+                  onChange={(e) => setEditedContent({ ...editedContent, priority: e.target.value })}
+                >
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                </select>
+              ) : (
+                <p className="text-gray-300 capitalize">{draft.content.priority || "normal"}</p>
+              )}
             </div>
           </div>
+
+          {draft.content.key_topics && draft.content.key_topics.length > 0 && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Key Topics</label>
+              <ul className="list-disc pl-5 text-gray-300 space-y-1">
+                {draft.content.key_topics.map((topic, i) => (
+                  <li key={i}>{topic}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {draft.content.constraints && draft.content.constraints.length > 0 && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Constraints</label>
+              <ul className="list-disc pl-5 text-gray-300 space-y-1">
+                {draft.content.constraints.map((constraint, i) => (
+                  <li key={i}>{constraint}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {draft.content.proposed_roles && draft.content.proposed_roles.length > 0 && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Proposed Roles</label>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {draft.content.proposed_roles.map((role, i) => (
+                  <span key={i} className="px-3 py-1 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-xs font-medium">
+                    {role}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

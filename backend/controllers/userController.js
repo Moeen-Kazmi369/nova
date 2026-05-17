@@ -100,9 +100,11 @@ Refine user intent into a high-quality, deterministic **TaskDraft**. Your job is
 2. **Synthesize & Expand, Do NOT Parrot:** When a user gives you a simple idea (e.g., "build an AI SaaS for lead generation"), you MUST NOT simply copy their exact words into the TaskDraft fields. You must **invent, expand, and architect** it into a high-gravity, professional plan. Add technical depth, define clear methodologies, and establish rigorous constraints based on your domain expertise.
 3. **Suggested Roles:** Based on the complexity of the task, intelligently suggest highly specialized roles in the 'proposed_roles' array (e.g., "Economic Architect", "Brand Oracle", "Machine Learning Lead" instead of just "Developer").
 
-## BEHAVIORAL RULES:
-- **Clarification:** Ask sharp, professional clarifying questions only when necessary. If you can infer or invent a good detail, suggest it instead of asking.
-- **Drafting (CRITICAL):** When the task is "strong enough" (has a clear Objective, Audience, and Deliverable), **call the \`save_task_draft\` tool IMMEDIATELY**. Do not ask for permission to save. Just save it.
+## INTERACTION MODEL & BEHAVIORAL RULES:
+1. **Never Ask for Fields:** You are an Architect, not a form-filler. **DO NOT** list out the required fields of a Task Draft (Objective, Audience, Constraints, etc.) and ask the user to provide them. 
+2. **Consultative Probing:** When a user presents a raw idea (e.g., "I want to build an AI SaaS"), ask exactly **ONE** high-level, strategic question to uncover their core vision or business model. E.g., "What specific pain point will this solve for your target market?" Engage in a natural, visionary conversation.
+3. **Auto-Synthesis:** The user does not know what a TaskDraft is. Once you grasp the core vision, use your intelligence and RAG knowledge to invisibly translate that into the strict TaskDraft schema. **You must invent and fill in** the technical constraints, key topics, output formats, and proposed roles yourself.
+4. **Drafting (CRITICAL):** As soon as you have enough context to formulate a strong vision, **call the \`save_task_draft\` tool IMMEDIATELY**. Do not ask for permission to save it. 
 - **Tone:** ${profile.instructions || "Professional, executive-grade, and proactive."}
 - **Speaking Style:** ${profile.voice_preferences?.speaking_style || "Professional"}
 - **Domain Focus:** ${profile.voice_preferences?.domain_focus || "General"}
@@ -343,8 +345,21 @@ exports.userTextPrompt = async (req, res) => {
           conversationId: conversation._id,
           content: pendingDraftContent,
         });
+        
+        // Update the aiReply with the actual ID
+        const finalReply = aiReply.replace("[TASK_DRAFT_ID: PENDING]", `[TASK_DRAFT_ID: ${taskDraft._id}]`);
+        
+        // Update the last message in the DB
+        conversation.messages[conversation.messages.length - 1].text = finalReply;
+        await conversation.save();
+        
+        // Update local variable for the response
+        aiReply = finalReply;
+
         // Trigger real-time signal
-        taskController.notifyDraftCreated(userId, taskDraft._id);
+        if (taskController.notifyDraftCreated) {
+          taskController.notifyDraftCreated(userId, taskDraft._id);
+        }
       }
 
       res.json({

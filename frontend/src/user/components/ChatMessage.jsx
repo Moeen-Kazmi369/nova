@@ -12,10 +12,17 @@ export const ChatMessage = ({
   timestamp,
   attachments,
   setIsSpeaking,
+  onOpenDraft,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Extract draft ID and clean the message
+  const draftMatch = typeof message === 'string' ? message.match(/\[TASK_DRAFT_ID:\s*([^\]]+)\]/) : null;
+  const draftId = draftMatch ? draftMatch[1] : null;
+  const displayMessage = typeof message === 'string' ? message.replace(/\[TASK_DRAFT_ID:\s*[^\]]+\]/, "") : message;
+
   const getFileIcon = (mimetype) => {
     if (mimetype.startsWith("image/"))
       return <ImageIcon className="w-4 h-4 md:w-5 md:h-5" />;
@@ -152,9 +159,22 @@ export const ChatMessage = ({
               ),
             }}
           >
-            {message || ""}
+            {displayMessage || ""}
           </ReactMarkdown>
         </div>
+
+        {draftId && (
+          <div className="mt-3 mb-1">
+            <button
+              onClick={() => onOpenDraft && onOpenDraft(draftId)}
+              className="w-full bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-300 font-semibold py-2 px-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              View Task Composer
+            </button>
+          </div>
+        )}
+
         {timestamp && (
           <div className="mt-2 flex items-center justify-between">
             <p className="text-[10px] md:text-xs text-gray-400">
