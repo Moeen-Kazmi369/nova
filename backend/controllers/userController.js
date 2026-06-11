@@ -12,6 +12,10 @@ const { detectWakeWord } = require("../utils/wakeWord");
 const NovaAceProfile = require("../models/NovaAceProfile");
 const TaskDraft = require("../models/TaskDraft");
 const taskController = require("./taskController");
+const {
+  OPENAI_QUOTA_LIMIT_MESSAGE,
+  isOpenAIQuotaError,
+} = require("../utils/openaiError");
 
 const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -282,10 +286,15 @@ exports.userTextPrompt = async (req, res) => {
       if (!effectiveConversationId) {
         const promptValue = chatType === "new" ? aiReply : prompt;
         // Generate conversation name from first user message
-        const conversationName = await generateConversationName(
-          openaiClient,
-          promptValue,
-        );
+        let conversationName = "New Chat";
+        try {
+          conversationName = await generateConversationName(
+            openaiClient,
+            promptValue,
+          );
+        } catch (e) {
+          console.warn("Failed to generate conversation name:", e?.message);
+        }
 
         conversation = new Conversation({
           userId,
@@ -374,6 +383,14 @@ exports.userTextPrompt = async (req, res) => {
       });
     } catch (error) {
       console.error("userTextPrompt error:", error);
+      if (isOpenAIQuotaError(error)) {
+        return res.status(429).json({
+          code: "OPENAI_QUOTA_EXCEEDED",
+          message: OPENAI_QUOTA_LIMIT_MESSAGE,
+          reply: OPENAI_QUOTA_LIMIT_MESSAGE,
+        });
+      }
+
       res.status(500).json({
         message: "Failed to process user prompt",
         error: error.message,
@@ -764,6 +781,9 @@ exports.elevenLabsLLM = async (req, res) => {
     res.end();
   } catch (error) {
     console.error("elevenLabsLLM error:", error);
+    const assistantErrorMessage = isOpenAIQuotaError(error)
+      ? OPENAI_QUOTA_LIMIT_MESSAGE
+      : "NOVA cannot respond right now because the AI service is unavailable. Please try again in a moment.";
 
     // Keep the same error payload shape your agent is used to
     const errorMessage = {
@@ -773,7 +793,7 @@ exports.elevenLabsLLM = async (req, res) => {
       model: aiModelId || "unknown",
       choices: [
         {
-          delta: { content: "Sorry—something went wrong. Please try again." },
+          delta: { role: "assistant", content: assistantErrorMessage },
           index: 0,
           finish_reason: "stop",
         },

@@ -32,6 +32,21 @@ import {
 import micIcone from "../../assets/micIcone.png";
 import { useNavigate } from "react-router-dom";
 
+const getPromptErrorMessage = (err) => {
+  const data = err?.response?.data;
+  const apiMessage =
+    data?.reply ||
+    data?.message ||
+    data?.error?.message ||
+    (typeof data?.error === "string" ? data.error : null);
+
+  if (apiMessage) return apiMessage;
+  if (err?.response?.status) {
+    return "NOVA could not complete the AI request. Please try again in a moment.";
+  }
+  return err?.message || "NOVA could not complete the AI request.";
+};
+
 function HomePage() {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 768);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -343,6 +358,7 @@ function HomePage() {
       return;
     }
     setIsProcessing(true);
+    setErrorMessage(null);
     const userMessage = {
       _id: ` temp-${Date.now()}`,
       attachments: selectedFiles || [],
@@ -404,10 +420,19 @@ function HomePage() {
       }
       setSelectedFiles([]);
     } catch (err) {
-      setErrorMessage(err.message || "Failed to get response from AI");
-      setChatMessages((prev) =>
-        prev.filter((msg) => msg._id !== userMessage._id)
-      );
+      const aiErrorText = getPromptErrorMessage(err);
+      setIsProcessing(false);
+      setErrorMessage(null);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          _id: `temp-${Date.now() + 1}`,
+          attachments: [],
+          sender: "ai",
+          text: aiErrorText,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
     }
   };
 
